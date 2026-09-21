@@ -74,21 +74,35 @@ pip install matplotlib
 
 Jalankan konfigurasi tertentu sesuai kebutuhan praktikum:
 
+**Linux / macOS (`python3`):**
 ```bash
 # Konfigurasi 1 (1 Loader Thread, 1 CPU Worker)
-python hybrid-pipeline.py --parts 50 --loader-threads 1 --cpu-workers 1
+python3 hybrid-pipeline.py --parts 50 --loader-threads 1 --cpu-workers 1
 
 # Konfigurasi 2 (2 Loader Threads, 2 CPU Workers)
-python hybrid-pipeline.py --parts 50 --loader-threads 2 --cpu-workers 2
+python3 hybrid-pipeline.py --parts 50 --loader-threads 2 --cpu-workers 2
 
 # Konfigurasi 3 (4 Loader Threads, 4 CPU Workers)
-python hybrid-pipeline.py --parts 50 --loader-threads 4 --cpu-workers 4
+python3 hybrid-pipeline.py --parts 50 --loader-threads 4 --cpu-workers 4
 
 # Konfigurasi 4 (8 Loader Threads, 4 CPU Workers)
-python hybrid-pipeline.py --parts 50 --loader-threads 8 --cpu-workers 4
+python3 hybrid-pipeline.py --parts 50 --loader-threads 8 --cpu-workers 4
 ```
 
-> **Catatan Windows**: Jika sistem Anda menggunakan Python Launcher, ganti `python` dengan `py` (misal: `py hybrid-pipeline.py --parts 50 --loader-threads 1 --cpu-workers 1`).
+**Windows (`py`):**
+```powershell
+# Konfigurasi 1 (1 Loader Thread, 1 CPU Worker)
+py hybrid-pipeline.py --parts 50 --loader-threads 1 --cpu-workers 1
+
+# Konfigurasi 2 (2 Loader Threads, 2 CPU Workers)
+py hybrid-pipeline.py --parts 50 --loader-threads 2 --cpu-workers 2
+
+# Konfigurasi 3 (4 Loader Threads, 4 CPU Workers)
+py hybrid-pipeline.py --parts 50 --loader-threads 4 --cpu-workers 4
+
+# Konfigurasi 4 (8 Loader Threads, 4 CPU Workers)
+py hybrid-pipeline.py --parts 50 --loader-threads 8 --cpu-workers 4
+```
 
 ---
 
@@ -96,8 +110,14 @@ python hybrid-pipeline.py --parts 50 --loader-threads 8 --cpu-workers 4
 
 Untuk menjalankan seluruh 4 konfigurasi beserta baseline serial dan menghasilkan grafik komparasi [results.png](results.png):
 
+**Linux / macOS (`python3`):**
 ```bash
-python hybrid-pipeline.py --parts 50 --run-all-benchmarks
+python3 hybrid-pipeline.py --parts 50 --run-all-benchmarks
+```
+
+**Windows (`py`):**
+```powershell
+py hybrid-pipeline.py --parts 50 --run-all-benchmarks
 ```
 
 ---

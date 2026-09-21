@@ -47,13 +47,24 @@ practice-3/
 
 ## Cara Menjalankan Skrip
 
+**Linux / macOS (`python3`):**
 ```bash
 # Opsi 1: Dari dalam folder practice-3
 cd practice-3
 python3 compare-threads-tasks.py
 
 # Opsi 2: Dari root workspace
-python3 practice-3/compare-threads-tasks.py
+python3 task-2-thread-task-parallel/practice-3/compare-threads-tasks.py
+```
+
+**Windows (`py`):**
+```powershell
+# Opsi 1: Dari dalam folder practice-3
+cd practice-3
+py compare-threads-tasks.py
+
+# Opsi 2: Dari root workspace
+py task-2-thread-task-parallel/practice-3/compare-threads-tasks.py
 ```
 
 ---

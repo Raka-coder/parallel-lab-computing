@@ -185,6 +185,7 @@ Detail konteks per modul praktikum tersedia pada dokumentasi di masing-masing fo
 
 Jalankan seluruh modul praktikum dari root workspace:
 
+**Linux / macOS (`python3`):**
 ```bash
 # Praktikum 1: Thread Parallelism (I/O-Bound)
 python3 practice-1/thread-parallelism.py
@@ -197,6 +198,21 @@ python3 practice-3/compare-threads-tasks.py
 
 # Praktikum 4: Hybrid Pipeline dengan dataset/train.csv
 python3 practice-4/hybrid-pipeline.py
+```
+
+**Windows (`py`):**
+```powershell
+# Praktikum 1: Thread Parallelism (I/O-Bound)
+py practice-1/thread-parallelism.py
+
+# Praktikum 2: Task Parallelism (CPU-Bound)
+py practice-2/task-parallelism.py
+
+# Praktikum 3: Perbandingan Threads vs Tasks
+py practice-3/compare-threads-tasks.py
+
+# Praktikum 4: Hybrid Pipeline dengan dataset/train.csv
+py practice-4/hybrid-pipeline.py
 ```
 
 ---

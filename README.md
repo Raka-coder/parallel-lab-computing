@@ -57,11 +57,21 @@ Pembahasan komprehensif mengenai konkurensi dan komputasi paralel:
 - **[Praktikum 4 — Hybrid Pipeline Architecture](task-2-thread-task-parallel/practice-4/README.md)**: Arsitektur 3-tahap (I/O Loader Threads $\rightarrow$ Queue Buffer $\rightarrow$ Multi-Process CPU Workers) memproses langsung dataset nyata SMS Spam (`dataset/train.csv`).
 
 ### Cara Menjalankan Tugas 2:
+
+**Linux / macOS (`python3`):**
 ```bash
 python3 task-2-thread-task-parallel/practice-1/thread-parallelism.py
 python3 task-2-thread-task-parallel/practice-2/task-parallelism.py
 python3 task-2-thread-task-parallel/practice-3/compare-threads-tasks.py
 python3 task-2-thread-task-parallel/practice-4/hybrid-pipeline.py
+```
+
+**Windows (`py`):**
+```powershell
+py task-2-thread-task-parallel/practice-1/thread-parallelism.py
+py task-2-thread-task-parallel/practice-2/task-parallelism.py
+py task-2-thread-task-parallel/practice-3/compare-threads-tasks.py
+py task-2-thread-task-parallel/practice-4/hybrid-pipeline.py
 ```
 
 ---

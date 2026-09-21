@@ -48,13 +48,24 @@ practice-1/
 
 Pastikan berada di direktori modul atau panggil dari root workspace:
 
+**Linux / macOS (`python3`):**
 ```bash
 # Opsi 1: Dari dalam folder practice-1
 cd practice-1
 python3 thread-parallelism.py
 
 # Opsi 2: Dari root workspace
-python3 practice-1/thread-parallelism.py
+python3 task-2-thread-task-parallel/practice-1/thread-parallelism.py
+```
+
+**Windows (`py`):**
+```powershell
+# Opsi 1: Dari dalam folder practice-1
+cd practice-1
+py thread-parallelism.py
+
+# Opsi 2: Dari root workspace
+py task-2-thread-task-parallel/practice-1/thread-parallelism.py
 ```
 
 ---
