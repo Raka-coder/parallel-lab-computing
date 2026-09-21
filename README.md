@@ -26,7 +26,12 @@ parallel-computing/
 │   ├── practice-2/                     # Praktikum 2: Task Parallelism (CPU-Bound)
 │   ├── practice-3/                     # Praktikum 3: Perbandingan Threads vs Tasks
 │   └── practice-4/                     # Praktikum 4: Hybrid Pipeline Architecture
-└── task-3/                             # Tugas 3 (Upcoming / Mendatang)
+└── task-3-massage-passing-interface/   # Tugas 3: Message Passing Interface (MPI)
+    ├── practice-1/                     # Praktikum 1: Scatter Sederhana
+    ├── practice-2/                     # Praktikum 2: Gather Sederhana
+    ├── practice-3/                     # Praktikum 3: Scatter + Gather (Kombinasi)
+    ├── practice-4/                     # Praktikum 4: Hitung Jumlah (Scatter + Gather)
+    └── practice-5/                     # Praktikum 5: Reduce vs Allreduce
 ```
 
 ---
@@ -43,6 +48,11 @@ source venv/bin/activate  # Untuk Windows: venv\Scripts\activate
 # 2. Menginstall dependensi yang dibutuhkan
 pip install --upgrade pip
 pip install -r requirements.txt
+
+# 3. Untuk Tugas 3 (MPI), pastikan juga install MPI runtime
+# Windows: install MS-MPI dari https://docs.microsoft.com/en-us/message-passing-interface/microsoft-mpi
+# Linux: sudo apt install openmpi-bin libopenmpi-dev
+# macOS: brew install open-mpi
 ```
 
 ---
@@ -76,5 +86,34 @@ py task-2-thread-task-parallel/practice-4/hybrid-pipeline.py
 
 ---
 
-### 2. Tugas 3 (Upcoming)
-Modul untuk praktikum selanjutnya pada folder `task-3/`.
+### 2. [Tugas 3 — Message Passing Interface (MPI)](task-3-massage-passing-interface/)
+Implementasi komunikasi antar proses menggunakan library `mpi4py`:
+- **[Praktikum 1 — Scatter Sederhana](task-3-massage-passing-interface/practice-1/)**: Distribusi data dari rank 0 ke seluruh proses menggunakan `comm.scatter()`.
+- **[Praktikum 2 — Gather Sederhana](task-3-massage-passing-interface/practice-2/)**: Pengumpulan data dari semua proses ke root menggunakan `comm.gather()`.
+- **[Praktikum 3 — Scatter + Gather (Kombinasi)](task-3-massage-passing-interface/practice-3/)**: Penggabungan distribusi data, komputasi lokal (kuadrat), dan pengumpulan hasil.
+- **[Praktikum 4 — Hitung Jumlah](task-3-massage-passing-interface/practice-4/)**: Scatter + Gather dengan komputasi `2*x` dan agregasi total.
+- **[Praktikum 5 — Reduce vs Allreduce](task-3-massage-passing-interface/practice-5/)**: Perbandingan `reduce` (hasil ke rank 0) vs `allreduce` (hasil ke semua rank) untuk MAX, SUM, dan rata-rata global.
+
+### Cara Menjalankan Tugas 3:
+
+```bash
+# Pastikan mpi4py & MPI runtime sudah terinstall
+# pip install mpi4py
+
+# Praktikum 1 - Scatter
+mpiexec -n 4 py task-3-massage-passing-interface/practice-1/scatter-simple.py
+
+# Praktikum 2 - Gather
+mpiexec -n 4 py task-3-massage-passing-interface/practice-2/gather-simple.py
+
+# Praktikum 3 - Scatter + Gather
+mpiexec -n 4 py task-3-massage-passing-interface/practice-3/scatter-gather.py
+
+# Praktikum 4 - Hitung Jumlah
+mpiexec -n 4 py task-3-massage-passing-interface/practice-4/calculate-scatter-gather.py
+
+# Praktikum 5 - Reduce vs Allreduce
+mpiexec -n 4 py task-3-massage-passing-interface/practice-5/reduce-allreduce.py
+```
+
+> ⚠️ Praktikum 1, 3, 4 wajib dengan `-n 4`. Praktikum 2 & 5 fleksibel jumlah proses.

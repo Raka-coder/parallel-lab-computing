@@ -2,7 +2,6 @@
 # NPM: 247006111172
 # Kelas: F
 # Mata Kuliah: Komputasi Paralel dan Terdistribusi
-# Tugas 3 - Praktikum 1: Scatter Sederhana (MPI)
 
 from mpi4py import MPI
 
@@ -10,7 +9,15 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-# Pastikan jumlah proses = 4
+if rank == 0:
+    print("=" * 50)
+    print("TUGAS 3 - PRAKTIKUM 1: SCATTER SEDERHANA (MPI)")
+    print("Nama  : Raka Restu Saputra")
+    print("NPM   : 247006111172")
+    print("Kelas : F")
+    print("=" * 50)
+    print()
+
 if size != 4:
     if rank == 0:
         print("Harap jalankan dengan -n 4")
