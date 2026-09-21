@@ -57,4 +57,4 @@ Thumbs.db
 *.log
 *.tmp
 *.temp
-dataset_parts/
+# dataset_parts/

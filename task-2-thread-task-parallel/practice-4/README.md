@@ -133,4 +133,3 @@ Grafik hasil perbandingan performa disimpan ke [results.png](results.png):
 
 ![Grafik Benchmark Praktikum 4](results.png)
 
-Analisis lengkap mengenai letak bottleneck, peran backpressure, serta penyesuaian rasio thread vs proses dapat dibaca pada berkas [jawaban_diskusi.md](jawaban_diskusi.md).
