@@ -1,3 +1,8 @@
+# Nama: Raka Restu Saputra
+# NPM: 247006111172
+# Kelas: F
+# Mata Kuliah: Komputasi Paralel dan Terdistribusi
+
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor

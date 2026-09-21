@@ -1,278 +1,388 @@
+# Nama: Raka Restu Saputra
+# NPM: 247006111172
+# Kelas: F
+# Mata Kuliah: Komputasi Paralel dan Terdistribusi
+
 import os
 import csv
-import re
 import time
 import queue
+import math
+import re
 import threading
-from concurrent.futures import ProcessPoolExecutor
-
-DATASET_CSV = "dataset/train.csv"
-NUM_BATCHES = 20
-QUEUE_MAXSIZE = 5
-
-
-def clean_and_tokenize(text):
-    text = text.lower()
-    return re.findall(r'\b[a-z0-9]+\b', text)
+import argparse
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 
-def process_batch(records):
-    total_tokens = 0
-    vocab = {}
+SPAM_KEYWORDS = [
+    "free", "win", "prize", "cash", "call", "txt", "claim",
+    "urgent", "http", "www", "mobile", "phone", "offer"
+]
 
-    for text in records:
-        tokens = clean_and_tokenize(text)
-        total_tokens += len(tokens)
 
-        for t in tokens:
-            h = 0
-            for ch in t:
-                for k in range(50):
-                    h = (h * 31 + ord(ch) + k) % 1000000007
-            vocab[t] = vocab.get(t, 0) + 1
+def split_csv_into_files(input_csv, output_dir, n_parts):
+    """
+    Stage 0: Data Preparation
+    Membaca input_csv dan membagi baris secara round-robin ke n_parts file part.
+    Setiap part file memiliki header CSV yang sama.
+    """
+    if not os.path.exists(input_csv):
+        raise FileNotFoundError(f"Input CSV '{input_csv}' tidak ditemukan!")
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    with open(input_csv, mode="r", encoding="utf-8", errors="ignore") as f:
+        reader = csv.reader(f)
+        try:
+            header = next(reader)
+        except StopIteration:
+            raise ValueError(f"File CSV '{input_csv}' kosong!")
+
+        rows = [row for row in reader if row]
+
+    part_paths = [os.path.join(output_dir, f"part_{i:03d}.csv") for i in range(n_parts)]
+    part_writers = []
+    part_handles = []
+
+    for path in part_paths:
+        fh = open(path, mode="w", newline="", encoding="utf-8")
+        writer = csv.writer(fh)
+        writer.writerow(header)
+        part_handles.append(fh)
+        part_writers.append(writer)
+
+    try:
+        for idx, row in enumerate(rows):
+            part_writers[idx % n_parts].writerow(row)
+    finally:
+        for fh in part_handles:
+            fh.close()
+
+    return part_paths
+
+
+def load_file(path):
+    """
+    Stage 1 Helper: Membaca 1 part file dari disk, mengembalikan (path, rows).
+    """
+    rows = []
+    with open(path, mode="r", encoding="utf-8", errors="ignore") as f:
+        reader = csv.reader(f)
+        try:
+            _ = next(reader)  
+        except StopIteration:
+            return path, rows
+
+        for row in reader:
+            if row:
+                rows.append(row)
+    return path, rows
+
+
+def loader_worker(file_paths, q):
+    """
+    Stage 1: Loader Threads Worker (I/O-Bound).
+    """
+    for p in file_paths:
+        try:
+            item = load_file(p)
+            q.put(item)
+        except Exception as e:
+            print(f"Error loading file {p}: {e}")
+            q.put((p, []))
+
+
+def process_chunk(item):
+    """
+    Stage 2: Process Pool Task (CPU-Bound).
+    - Menghitung baris, kata, karakter, label spam/ham, dan spam keyword hits.
+    - Checksum berbasis nilai ord().
+    - Loop 10.000 iterasi math.sqrt per baris sebagai beban komputasi CPU buatan.
+    """
+    path, rows = item
+
+    total_rows = len(rows)
+    total_words = 0
+    total_chars = 0
+    spam_count = 0
+    ham_count = 0
+    keyword_hits = 0
+    checksum = 0
+
+    for row in rows:
+        text = row[0] if len(row) > 0 else ""
+        label_str = row[1].strip() if len(row) > 1 else ""
+
+        if label_str == "1":
+            spam_count += 1
+        elif label_str == "0":
+            ham_count += 1
+
+        total_chars += len(text)
+        words = re.findall(r"\b[a-zA-Z0-9_]+\b", text)
+        total_words += len(words)
+
+        text_lower = text.lower()
+        for kw in SPAM_KEYWORDS:
+            keyword_hits += text_lower.count(kw)
+
+        for ch in text:
+            checksum = (checksum + ord(ch)) % 1000000007
+
+        val = 1000.0 + len(text)
+        for _ in range(10000):
+            val = math.sqrt(val * val + 1.0)
+        checksum = (checksum + int(val)) % 1000000007
 
     return {
-        "count": len(records),
-        "tokens": total_tokens,
-        "unique_vocab": len(vocab)
+        "path": path,
+        "total_rows": total_rows,
+        "total_words": total_words,
+        "total_chars": total_chars,
+        "spam_count": spam_count,
+        "ham_count": ham_count,
+        "keyword_hits": keyword_hits,
+        "checksum": checksum
     }
 
 
-def loader_thread(csv_path, batch_ranges, q):
-    for batch_id, start_row, end_row in batch_ranges:
-        try:
-            load_start = time.perf_counter()
-            with open(csv_path, 'r', encoding='utf-8', errors='ignore') as f:
-                reader = csv.reader(f)
-                next(reader, None)
-                batch_records = [
-                    row[0] for idx, row in enumerate(reader)
-                    if start_row <= idx < end_row and row
-                ]
-            q.put((batch_id, batch_records, load_start))
-        except Exception as e:
-            print(f"Error membaca batch {batch_id}: {e}")
-    q.put(None)
+def run_serial(part_paths):
+    """
+    Baseline Comparison: Pemrosesan sekuensial seluruh file secara berurutan.
+    """
+    t_start = time.perf_counter()
+    results = [process_chunk(load_file(p)) for p in part_paths]
+    duration = time.perf_counter() - t_start
+
+    num_files = len(part_paths)
+    return {
+        "total_files": num_files,
+        "total_sms": sum(r["total_rows"] for r in results),
+        "spam_count": sum(r["spam_count"] for r in results),
+        "ham_count": sum(r["ham_count"] for r in results),
+        "total_words": sum(r["total_words"] for r in results),
+        "total_chars": sum(r["total_chars"] for r in results),
+        "keyword_hits": sum(r["keyword_hits"] for r in results),
+        "duration": duration,
+        "throughput": num_files / duration if duration > 0 else 0,
+        "avg_latency": duration / num_files if num_files > 0 else 0
+    }
 
 
-def aggregator(q, results, num_loaders, cpu_executor):
-    futures = []
-    done_loaders = 0
+def run_hybrid_pipeline(part_paths, num_loader_threads, num_cpu_workers, queue_size):
+    """
+    Hybrid Pipeline: Loader Threads + Bounded Queue Buffer + ProcessPoolExecutor.
+    """
+    t_start = time.perf_counter()
+    data_queue = queue.Queue(maxsize=queue_size)
+    num_files = len(part_paths)
 
-    while done_loaders < num_loaders:
-        item = q.get()
-        if item is None:
-            done_loaders += 1
-            continue
+    thread_assignments = [[] for _ in range(num_loader_threads)]
+    for idx, path in enumerate(part_paths):
+        thread_assignments[idx % num_loader_threads].append(path)
 
-        batch_id, batch_records, load_time = item
-        future = cpu_executor.submit(process_batch, batch_records)
-        futures.append((batch_id, len(batch_records), load_time, future))
+    loaders = []
+    for assignment in thread_assignments:
+        t = threading.Thread(target=loader_worker, args=(assignment, data_queue), daemon=True)
+        t.start()
+        loaders.append(t)
 
-    for batch_id, count, load_time, future in futures:
-        result = future.result()
-        latency = time.perf_counter() - load_time
-        results.append({
-            'batch_id': batch_id,
-            'count': count,
-            'result': result,
-            'latency': latency
-        })
-
-
-def get_dataset_info(csv_path=DATASET_CSV):
-    if not os.path.exists(csv_path):
-        raise FileNotFoundError(f"File dataset tidak ditemukan di: {csv_path}")
-
-    with open(csv_path, 'r', encoding='utf-8', errors='ignore') as f:
-        reader = csv.reader(f)
-        next(reader, None)
-        total_rows = sum(1 for row in reader if row)
-    return total_rows
-
-
-def run_baseline(csv_path):
-    start = time.perf_counter()
-    with open(csv_path, 'r', encoding='utf-8', errors='ignore') as f:
-        reader = csv.reader(f)
-        next(reader, None)
-        all_records = [row[0] for row in reader if row]
-
-    result = process_batch(all_records)
-    total_time = time.perf_counter() - start
-    return total_time, len(all_records), result
-
-
-def run_hybrid(csv_path, total_rows, num_batches, num_loaders, num_workers):
-    q = queue.Queue(maxsize=QUEUE_MAXSIZE)
     results = []
-
-    batch_size = (total_rows + num_batches - 1) // num_batches
-    all_batches = []
-    for b in range(num_batches):
-        s = b * batch_size
-        e = min((b + 1) * batch_size, total_rows)
-        all_batches.append((b, s, e))
-
-    loader_chunks = [all_batches[i::num_loaders] for i in range(num_loaders)]
-
-    start = time.perf_counter()
-
-    with ProcessPoolExecutor(max_workers=num_workers) as cpu_executor:
-        loaders = []
-        for chunk in loader_chunks:
-            t = threading.Thread(target=loader_thread, args=(csv_path, chunk, q))
-            loaders.append(t)
-            t.start()
-
-        aggregator(q, results, num_loaders, cpu_executor)
+    with ProcessPoolExecutor(max_workers=num_cpu_workers) as executor:
+        futures = []
+        for _ in range(num_files):
+            item = data_queue.get()
+            fut = executor.submit(process_chunk, item)
+            futures.append(fut)
+            data_queue.task_done()
 
         for t in loaders:
             t.join()
 
-    total_time = time.perf_counter() - start
-    return total_time, results
+        for fut in as_completed(futures):
+            results.append(fut.result())
+
+    duration = time.perf_counter() - t_start
+    return {
+        "total_files": num_files,
+        "total_sms": sum(r["total_rows"] for r in results),
+        "spam_count": sum(r["spam_count"] for r in results),
+        "ham_count": sum(r["ham_count"] for r in results),
+        "total_words": sum(r["total_words"] for r in results),
+        "total_chars": sum(r["total_chars"] for r in results),
+        "keyword_hits": sum(r["keyword_hits"] for r in results),
+        "duration": duration,
+        "throughput": num_files / duration if duration > 0 else 0,
+        "avg_latency": duration / num_files if num_files > 0 else 0
+    }
 
 
-def show_plots(baseline_time, baseline_count, benchmark_records):
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError:
-        print()
-        print("=" * 70)
-        print("  [!] matplotlib belum terinstall.")
-        print("  Jalankan perintah berikut untuk menginstall:")
-        print("      pip install matplotlib")
-        print("=" * 70)
-        return
+def print_table(records):
+    """
+    Mencetak tabel metrik terminal format terstandarisasi laporan.
+    """
+    header = "| Threads Loader | Workers CPU | Jumlah File | Waktu (s) | Throughput (file/s) | Avg Latency (s) |"
+    separator = "|" + "-" * 16 + "|" + "-" * 13 + "|" + "-" * 13 + "|" + "-" * 11 + "|" + "-" * 21 + "|" + "-" * 17 + "|"
+    print("\n" + "=" * 97)
+    print("HASIL EVALUASI METRIK PIPELINE")
+    print("=" * 97)
+    print(header)
+    print(separator)
+    for r in records:
+        tl_str = str(r["threads_loader"]).center(16)
+        wc_str = str(r["workers_cpu"]).center(13)
+        jf_str = str(r["jumlah_file"]).center(13)
+        w_str = f"{r['waktu']:.4f}".center(11)
+        tp_str = f"{r['throughput']:.4f}".center(21)
+        lat_str = f"{r['avg_latency']:.4f}".center(17)
+        print(f"|{tl_str}|{wc_str}|{jf_str}|{w_str}|{tp_str}|{lat_str}|")
+    print(separator + "\n")
 
-    labels = ["Serial"] + [f"{r[0]}L / {r[1]}W" for r in benchmark_records]
-    times = [baseline_time] + [r[2] for r in benchmark_records]
-    throughputs = [baseline_count / baseline_time] + [r[3] for r in benchmark_records]
-    speedups = [1.0] + [r[5] for r in benchmark_records]
 
-    plt.style.use("seaborn-v0_8-whitegrid" if "seaborn-v0_8-whitegrid" in plt.style.available else "default")
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 5))
+def plot_benchmark_results(configs_results, serial_result, output_image="results.png"):
+    """
+    Membuat grafik komparasi performa (Waktu, Throughput, Speedup) dengan Matplotlib.
+    """
+    labels = ["Serial\n(1T/1P)"] + [
+        f"L={c['threads_loader']}\nW={c['workers_cpu']}" for c in configs_results
+    ]
+    durations = [serial_result["duration"]] + [c["waktu"] for c in configs_results]
+    throughputs = [serial_result["throughput"]] + [c["throughput"] for c in configs_results]
+    speedups = [1.0] + [serial_result["duration"] / c["waktu"] for c in configs_results]
 
-    colors = ["#e74c3c", "#3498db", "#f39c12", "#2ecc71", "#9b59b6"]
+    fig, axes = plt.subplots(1, 3, figsize=(16, 5))
+    fig.suptitle("Benchmark Evaluasi Hybrid Pipeline (Tugas 4)", fontsize=14, fontweight="bold")
+    colors = ["#7f7f7f", "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"]
 
-    bars1 = ax1.bar(labels, times, color=colors, width=0.55, edgecolor="black", linewidth=1.0)
-    ax1.set_title("Waktu Eksekusi (detik)", fontsize=11, fontweight="bold", pad=10)
-    ax1.set_ylabel("Waktu (detik)", fontsize=10)
-    ax1.tick_params(axis="x", rotation=15)
-    ax1.grid(axis="y", linestyle="--", alpha=0.7)
+    bars1 = axes[0].bar(labels, durations, color=colors[:len(labels)], edgecolor="black", alpha=0.85)
+    axes[0].set_title("Waktu Eksekusi (detik) - Lower is better")
+    axes[0].set_ylabel("Waktu (s)")
+    axes[0].grid(axis="y", linestyle="--", alpha=0.7)
     for bar in bars1:
-        h = bar.get_height()
-        ax1.annotate(
-            f"{h:.2f}s",
-            xy=(bar.get_x() + bar.get_width() / 2, h),
-            xytext=(0, 4),
-            textcoords="offset points",
-            ha="center",
-            va="bottom",
-            fontsize=9,
-            fontweight="bold"
-        )
+        yval = bar.get_height()
+        axes[0].text(bar.get_x() + bar.get_width() / 2.0, yval + 0.05, f"{yval:.2f}s", ha="center", va="bottom", fontsize=9)
 
-    bars2 = ax2.bar(labels, throughputs, color=colors, width=0.55, edgecolor="black", linewidth=1.0)
-    ax2.set_title("Throughput (data/detik)", fontsize=11, fontweight="bold", pad=10)
-    ax2.set_ylabel("Data per detik", fontsize=10)
-    ax2.tick_params(axis="x", rotation=15)
-    ax2.grid(axis="y", linestyle="--", alpha=0.7)
+    bars2 = axes[1].bar(labels, throughputs, color=colors[:len(labels)], edgecolor="black", alpha=0.85)
+    axes[1].set_title("Throughput (file/s) - Higher is better")
+    axes[1].set_ylabel("File / detik")
+    axes[1].grid(axis="y", linestyle="--", alpha=0.7)
     for bar in bars2:
-        h = bar.get_height()
-        ax2.annotate(
-            f"{h:.0f}",
-            xy=(bar.get_x() + bar.get_width() / 2, h),
-            xytext=(0, 4),
-            textcoords="offset points",
-            ha="center",
-            va="bottom",
-            fontsize=9,
-            fontweight="bold"
-        )
+        yval = bar.get_height()
+        axes[1].text(bar.get_x() + bar.get_width() / 2.0, yval + 0.1, f"{yval:.2f}", ha="center", va="bottom", fontsize=9)
 
-    bars3 = ax3.bar(labels, speedups, color=colors, width=0.55, edgecolor="black", linewidth=1.0)
-    ax3.axhline(1.0, color="#7f8c8d", linestyle="--", linewidth=1.2, label="Baseline (1.0x)")
-    ax3.set_title("Speedup vs Baseline (x)", fontsize=11, fontweight="bold", pad=10)
-    ax3.set_ylabel("Speedup (x)", fontsize=10)
-    ax3.tick_params(axis="x", rotation=15)
-    ax3.legend(frameon=True)
-    ax3.grid(axis="y", linestyle="--", alpha=0.7)
+    bars3 = axes[2].bar(labels, speedups, color=colors[:len(labels)], edgecolor="black", alpha=0.85)
+    axes[2].axhline(1.0, color="red", linestyle="--", linewidth=1.2, label="Baseline (1.0x)")
+    axes[2].set_title("Speedup vs Baseline - Higher is better")
+    axes[2].set_ylabel("Speedup Multiplier (x)")
+    axes[2].grid(axis="y", linestyle="--", alpha=0.7)
+    axes[2].legend(loc="upper left")
     for bar in bars3:
-        h = bar.get_height()
-        ax3.annotate(
-            f"{h:.2f}x",
-            xy=(bar.get_x() + bar.get_width() / 2, h),
-            xytext=(0, 4),
-            textcoords="offset points",
-            ha="center",
-            va="bottom",
-            fontsize=9,
-            fontweight="bold"
-        )
+        yval = bar.get_height()
+        axes[2].text(bar.get_x() + bar.get_width() / 2.0, yval + 0.03, f"{yval:.2f}x", ha="center", va="bottom", fontsize=9)
 
-    plt.suptitle("Tugas 4: Evaluasi Performa Hybrid Pipeline (Threads + Processes)", fontsize=13, fontweight="bold", y=0.98)
     plt.tight_layout()
-    plt.show()
+    plt.savefig(output_image, dpi=300)
+    print(f"[Grafik] Visualisasi grafik berhasil disimpan ke: {output_image}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Hybrid Pipeline: I/O Loader Threads + Multi-Process CPU Workers")
+    parser.add_argument("--input", default="dataset/train.csv", help="Path file CSV input (default: dataset/train.csv)")
+    parser.add_argument("--parts", type=int, default=50, help="Jumlah file part (default: 50)")
+    parser.add_argument("--loader-threads", type=int, default=4, help="Jumlah thread loader (default: 4)")
+    parser.add_argument("--cpu-workers", type=int, default=4, help="Jumlah process CPU worker (default: 4)")
+    parser.add_argument("--queue-size", type=int, default=10, help="Maxsize queue untuk backpressure (default: 10)")
+    parser.add_argument("--output-dir", default="dataset_parts", help="Folder output part files (default: dataset_parts)")
+    parser.add_argument("--run-all-benchmarks", action="store_true", help="Jalankan semua 4 konfigurasi praktikum dan buat grafik")
+
+    args = parser.parse_args()
+
+    input_csv = args.input
+    if not os.path.exists(input_csv):
+        for candidate in ["dataset/train.csv", "train.csv"]:
+            if os.path.exists(candidate):
+                input_csv = candidate
+                break
+
+    print(f"Input CSV       : {input_csv}")
+    print(f"Jumlah Parts    : {args.parts}")
+    print(f"Output Directory: {args.output_dir}")
+
+    # Stage 0: Data Preparation
+    print("\n[Stage 0] Mempersiapkan data dan membagi ke file parts...")
+    part_paths = split_csv_into_files(input_csv, args.output_dir, args.parts)
+    print(f"[Stage 0] Berhasil membuat {len(part_paths)} part files di folder '{args.output_dir}'.")
+
+    if args.run_all_benchmarks:
+        print("\n" + "=" * 80)
+        print("MEMULAI RUN SEMUA 4 KONFIGURASI BENCHMARK + SERIAL BASELINE")
+        print("=" * 80)
+
+        print("\n[*] Menjalankan Serial Baseline...")
+        ser_res = run_serial(part_paths)
+        print(f"    Selesai dalam {ser_res['duration']:.4f}s | Throughput: {ser_res['throughput']:.2f} file/s")
+
+        configs = [
+            {"threads_loader": 1, "workers_cpu": 1},
+            {"threads_loader": 2, "workers_cpu": 2},
+            {"threads_loader": 4, "workers_cpu": 4},
+            {"threads_loader": 8, "workers_cpu": 4},
+        ]
+
+        table_records = []
+        for cfg in configs:
+            tl = cfg["threads_loader"]
+            cw = cfg["workers_cpu"]
+            print(f"\n[*] Menjalankan Konfigurasi: Loader Threads = {tl}, CPU Workers = {cw}, Queue = {args.queue_size}...")
+            res = run_hybrid_pipeline(part_paths, tl, cw, args.queue_size)
+            print(f"    Selesai dalam {res['duration']:.4f}s | Throughput: {res['throughput']:.2f} file/s")
+
+            rec = {
+                "threads_loader": tl,
+                "workers_cpu": cw,
+                "jumlah_file": args.parts,
+                "waktu": res["duration"],
+                "throughput": res["throughput"],
+                "avg_latency": res["avg_latency"]
+            }
+            table_records.append(rec)
+
+        print_table(table_records)
+        plot_benchmark_results(table_records, ser_res, output_image="results.png")
+
+    else:
+        print(f"\n[*] Menjalankan Hybrid Pipeline (Threads: {args.loader_threads}, Workers: {args.cpu_workers}, Queue: {args.queue_size})...")
+        res = run_hybrid_pipeline(part_paths, args.loader_threads, args.cpu_workers, args.queue_size)
+
+        rec = {
+            "threads_loader": args.loader_threads,
+            "workers_cpu": args.cpu_workers,
+            "jumlah_file": args.parts,
+            "waktu": res["duration"],
+            "throughput": res["throughput"],
+            "avg_latency": res["avg_latency"]
+        }
+
+        print_table([rec])
+        print("Detail Agregasi:")
+        print(f"- Total Files   : {res['total_files']}")
+        print(f"- Total SMS     : {res['total_sms']}")
+        print(f"- Spam Count    : {res['spam_count']}")
+        print(f"- Ham Count     : {res['ham_count']}")
+        print(f"- Total Words   : {res['total_words']}")
+        print(f"- Total Chars   : {res['total_chars']}")
+        print(f"- Keyword Hits  : {res['keyword_hits']}")
 
 
 if __name__ == "__main__":
-    print("=" * 100)
-    print("TUGAS 4 - HYBRID PIPELINE (THREADS + PROCESSES)")
+    print()
+    print("=" * 60)
+    print("TUGAS 4 - HYBRID PIPELINE")
     print("Nama  : Raka Restu Saputra")
     print("NPM   : 247006111172")
     print("Kelas : F")
-    print(f"Dataset : {DATASET_CSV}")
-    print("=" * 100)
-
-    total_rows = get_dataset_info(DATASET_CSV)
-    print(f"\nTotal data SMS dalam dataset: {total_rows} baris.")
-
-    print("\nMenjalankan baseline (single-process serial)...")
-    baseline_time, baseline_count, baseline_res = run_baseline(DATASET_CSV)
-    print(f"Baseline selesai dalam {baseline_time:.4f}s ({baseline_count} data SMS diproses)\n")
-
-    configs = [
-        (4, 4),
-        (4, 2),
-        (2, 4),
-        (8, 4),
-    ]
-
-    print("Menjalankan evaluasi konfigurasi Hybrid Pipeline...")
-    print(f"\n{'Threads Loader':<16} {'CPU Workers':<13} {'Jumlah Data':<13} "
-          f"{'Waktu (s)':<12} {'Throughput (data/s)':<22} {'Avg Latency (s)':<18} {'Speedup':<10}")
-    print("-" * 110)
-
-    benchmark_records = []
-    for num_loaders, num_workers in configs:
-        hybrid_time, hybrid_results = run_hybrid(DATASET_CSV, total_rows, NUM_BATCHES, num_loaders, num_workers)
-        total_processed = sum(r['count'] for r in hybrid_results)
-        throughput = total_processed / hybrid_time
-        avg_latency = sum(r['latency'] for r in hybrid_results) / len(hybrid_results)
-        speedup = baseline_time / hybrid_time
-        benchmark_records.append((num_loaders, num_workers, hybrid_time, throughput, avg_latency, speedup))
-
-        print(f"{num_loaders:<16} {num_workers:<13} {total_processed:<13} "
-              f"{hybrid_time:<12.4f} {throughput:<22.2f} {avg_latency:<18.4f} {speedup:<10.2f}x")
-
-    print("=" * 110)
-    best_record = max(benchmark_records, key=lambda x: x[5])
-    print(f"\nRingkasan:")
-    print(f"- Waktu Baseline (Serial)   : {baseline_time:.4f}s")
-    print(f"- Konfigurasi Terbaik       : {best_record[0]} Loader Threads, {best_record[1]} CPU Workers")
-    print(f"- Waktu Hybrid Tercepat     : {best_record[2]:.4f}s")
-    print(f"- Speedup Terbaik           : {best_record[5]:.2f}x")
-    print("=" * 110)
-
-    print()
-    print("=" * 70)
-    print("  MENAMPILKAN GRAFIK (matplotlib)")
-    print("=" * 70)
-    show_plots(baseline_time, baseline_count, benchmark_records)
-
-    print()
-    print("=" * 100)
-    print("SELESAI")
-    print("=" * 100)
+    print("=" * 60)
+    main()
