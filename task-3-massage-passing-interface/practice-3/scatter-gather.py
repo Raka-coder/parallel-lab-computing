@@ -2,7 +2,6 @@
 # NPM: 247006111172
 # Kelas: F
 # Mata Kuliah: Komputasi Paralel dan Terdistribusi
-# Tugas 3 - Praktikum 3: Scatter + Gather (Kombinasi)
 
 from mpi4py import MPI
 import time

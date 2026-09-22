@@ -2,7 +2,6 @@
 # NPM: 247006111172
 # Kelas: F
 # Mata Kuliah: Komputasi Paralel dan Terdistribusi
-# Tugas 5 - Praktikum 5: Reduce vs Allreduce (MAX & Rata-Rata Global)
 
 from mpi4py import MPI
 import numpy as np
@@ -11,9 +10,6 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-# =====================================================================
-# HEADER (hanya rank 0)
-# =====================================================================
 if rank == 0:
     print("=" * 60)
     print("TUGAS 5 - PRAKTIKUM 5: REDUCE VS ALLREDUCE")
@@ -25,9 +21,6 @@ if rank == 0:
 
 comm.Barrier()
 
-# =====================================================================
-# BAGIAN A — MAX dengan REDUCE
-# =====================================================================
 if rank == 0:
     print("--- BAGIAN A: MAX dengan Reduce ---")
 
@@ -44,9 +37,6 @@ if rank == 0:
 
 comm.Barrier()
 
-# =====================================================================
-# BAGIAN B — Rata-rata global via ALLREDUCE
-# =====================================================================
 if rank == 0:
     print("--- BAGIAN B: AVG dengan Allreduce ---")
 
@@ -63,9 +53,6 @@ comm.Barrier()
 if rank == 0:
     print()
 
-# =====================================================================
-# BAGIAN C — Total 1000 bilangan acak/proses via ALLREDUCE
-# =====================================================================
 if rank == 0:
     print("--- BAGIAN C: TOTAL 1000 Bilangan Acak/Proses ---")
 
@@ -77,14 +64,11 @@ print(f"[Rank {rank}] local_sum (1000 bilangan) = {local_sum:.6f}")
 
 total_sum = comm.allreduce(local_sum, op=MPI.SUM)
 
-# Semua rank menerima total_sum (karena Allreduce)
+
 print(f"[Rank {rank}] [ALLREDUCE-SUM] Total = {total_sum:.6f}")
 
 comm.Barrier()
 
-# =====================================================================
-# RINGKASAN AKHIR (hanya rank 0)
-# =====================================================================
 if rank == 0:
     print()
     print("=" * 60)

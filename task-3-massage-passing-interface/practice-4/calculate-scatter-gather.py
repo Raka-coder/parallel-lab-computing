@@ -2,7 +2,6 @@
 # NPM: 247006111172
 # Kelas: F
 # Mata Kuliah: Komputasi Paralel dan Terdistribusi
-# Tugas 4 - Praktikum 4: Hitung Jumlah dengan Scatter + Gather (Bonus)
 
 from mpi4py import MPI
 
