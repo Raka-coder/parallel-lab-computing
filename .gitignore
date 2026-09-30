@@ -58,3 +58,9 @@ Thumbs.db
 *.tmp
 *.temp
 # dataset_parts/
+
+# Heavy local-only datasets (task-4) — keep locally, reproducible via scripts
+task-4-hybrid-computing/b1_hybrid_pipeline/data/*
+!task-4-hybrid-computing/b1_hybrid_pipeline/data/.gitkeep
+task-4-hybrid-computing/b3_wordcount_mpi/corpus/*
+!task-4-hybrid-computing/b3_wordcount_mpi/corpus/.gitkeep
