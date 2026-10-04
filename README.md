@@ -4,7 +4,7 @@
 [![MPI](https://img.shields.io/badge/MPI-mpi4py-1F4257?style=for-the-badge&logo=openmpi&logoColor=white)](https://mpi4py.readthedocs.io/)
 [![NumPy](https://img.shields.io/badge/NumPy-Scientific-013243?style=for-the-badge&logo=numpy&logoColor=white)](https://numpy.org/)
 [![Matplotlib](https://img.shields.io/badge/Matplotlib-Visualisasi-11557C?style=for-the-badge&logo=plotly&logoColor=white)](https://matplotlib.org/)
-[![Tasks](https://img.shields.io/badge/Tasks-3_of_3_Completed-blueviolet?style=for-the-badge&logo=checkmarx&logoColor=white)](#daftar-tugas)
+[![Tasks](https://img.shields.io/badge/Tasks-4_of_4_Completed-blueviolet?style=for-the-badge&logo=checkmarx&logoColor=white)](#daftar-tugas)
 
 Repositori ini berisi kumpulan tugas, praktikum, dan implementasi materi mata kuliah **Komputasi Paralel dan Terdistribusi** menggunakan bahasa pemrograman Python.
 
@@ -38,14 +38,20 @@ parallel-computing/
 │   ├── practice-3/                     # Praktikum 3: Scatter + Gather (Kombinasi)
 │   ├── practice-4/                     # Praktikum 4: Hitung Jumlah (Scatter + Gather)
 │   └── practice-5/                     # Praktikum 5: Reduce vs Allreduce
-└── task-4-hybrid-computing/            # Tugas 4: Hybrid Computing (A = 2)
-    ├── README.md                       # Dokumentasi lengkap Tugas 4
-    ├── requirements.txt                # Dependensi Tugas 4 (matplotlib, mpi4py)
-    ├── b1_hybrid_pipeline/             # B1: Threads + ProcessPool + Backpressure (120 file Zipf)
-    ├── b2_mpi_processpool/             # B2: MPI antar-rank + ProcessPool intra-rank (π Monte Carlo)
-    ├── b3_wordcount_mpi/               # B3: MPI Word Count ThreadPool vs ProcessPool (40 e-book Gutenberg)
-    ├── tools/                          # Generator gambar pendukung (Amdahl, diagram C)
-    └── docs/figs/                      # Gambar pendukung (amdahl_A2.png, diagram_c_fraud_hybrid.png)
+├── task-4-hybrid-computing/            # Tugas 4: Hybrid Computing (A = 2)
+│   ├── README.md                       # Dokumentasi lengkap Tugas 4
+│   ├── requirements.txt                # Dependensi Tugas 4 (matplotlib, mpi4py)
+│   ├── b1_hybrid_pipeline/             # B1: Threads + ProcessPool + Backpressure (120 file Zipf)
+│   ├── b2_mpi_processpool/             # B2: MPI antar-rank + ProcessPool intra-rank (π Monte Carlo)
+│   ├── b3_wordcount_mpi/               # B3: MPI Word Count ThreadPool vs ProcessPool (40 e-book Gutenberg)
+│   ├── tools/                          # Generator gambar pendukung (Amdahl, diagram C)
+│   └── docs/figs/                      # Gambar pendukung (amdahl_A2.png, diagram_c_fraud_hybrid.png)
+└── uts-practical-exam/                 # UTS: Praktikum Hybrid Web Simulation
+    ├── README.md                       # Dokumentasi lengkap UTS
+    ├── requirements.txt                # Dependensi UTS
+    ├── mock_server.py                  # Server mock API lokal (simulasi latency)
+    ├── web_simulation.py               # Simulasi hybrid Threads + ProcessPool
+    └── output/                         # Log, CSV hasil eksperimen, grafik
 ```
 
 ---
@@ -173,3 +179,27 @@ py task-4-hybrid-computing\b2_mpi_processpool\run_b2_grid.py
 py task-4-hybrid-computing\b3_wordcount_mpi\download_corpus.py
 mpiexec -n 4 py task-4-hybrid-computing\b3_wordcount_mpi\wordcount_mpi.py --workers 4 --repeat 3
 ```
+
+---
+
+### 4. [UTS — Praktikum Hybrid Web Simulation](uts-practical-exam/README.md)
+Praktikum Ujian Tengah Semester: simulasi paralel pengambilan & pemrosesan data web hybrid (Threads untuk I/O-bound HTTP + ProcessPool untuk CPU-bound pemrosesan), dengan mock server lokal.
+- Parameter pribadi dari NIM: 2 thread, 3 process, 1720 data.
+- **Bagian B**: single run hybrid dengan parameter NIM.
+- **Bagian C**: 10 konfigurasi thread × process, metrik waktu & speedup, grafik `output/`.
+
+### Cara Menjalankan UTS:
+
+```bash
+pip install -r uts-practical-exam/requirements.txt
+
+# Terminal 1 — mock server (biarkan terbuka)
+py uts-practical-exam\mock_server.py
+
+# Terminal 2 — simulasi (default: Bagian B + C)
+py uts-practical-exam\web_simulation.py
+# Hanya Bagian B: py uts-practical-exam\web_simulation.py --mode b
+# Hanya Bagian C: py uts-practical-exam\web_simulation.py --mode c
+```
+
+> 📊 Output (log, `hasil_eksperimen.csv`, grafik speedup/waktu) tersimpan di `uts-practical-exam/output/`.

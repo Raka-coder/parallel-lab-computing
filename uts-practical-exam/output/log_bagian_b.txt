@@ -1,0 +1,19 @@
+Nama: Raka Restu Saputra
+NPM: 247006111172
+Threads: 2
+Processes: 3
+Data: 1720
+Total Time: 20.0621 s
+Stage 1: 19.1429 s
+Stage 2: 0.9192 s
+Throughput: 85.73 req/s
+Speedup: 1.898
+Efficiency: 63.26%
+count: 1720.0000
+mean: 22.1349
+min: 7.1526
+max: 44.7017
+stddev: 7.9852
+p50: 19.8704
+p95: 36.8978
+p99: 41.1434
