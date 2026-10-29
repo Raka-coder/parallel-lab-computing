@@ -25,7 +25,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
+*.omo
 # Virtual Environments
 venv/
 .venv/
@@ -53,10 +53,16 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
+# Database lokal (SQLite) dari praktikum RPC
+*.db
+*.db-wal
+*.db-shm
+
 # Logs & Temporary Files
 *.log
 *.tmp
 *.temp
+*.megamemory
 # dataset_parts/
 
 # Heavy local-only datasets (task-4) — keep locally, reproducible via scripts

@@ -4,7 +4,7 @@
 [![MPI](https://img.shields.io/badge/MPI-mpi4py-1F4257?style=for-the-badge&logo=openmpi&logoColor=white)](https://mpi4py.readthedocs.io/)
 [![NumPy](https://img.shields.io/badge/NumPy-Scientific-013243?style=for-the-badge&logo=numpy&logoColor=white)](https://numpy.org/)
 [![Matplotlib](https://img.shields.io/badge/Matplotlib-Visualisasi-11557C?style=for-the-badge&logo=plotly&logoColor=white)](https://matplotlib.org/)
-[![Tasks](https://img.shields.io/badge/Tasks-4_of_4_Completed-blueviolet?style=for-the-badge&logo=checkmarx&logoColor=white)](#daftar-tugas)
+[![Tasks](https://img.shields.io/badge/Tasks-5_of_5_Completed-blueviolet?style=for-the-badge&logo=checkmarx&logoColor=white)](#daftar-tugas)
 
 Repositori ini berisi kumpulan tugas, praktikum, dan implementasi materi mata kuliah **Komputasi Paralel dan Terdistribusi** menggunakan bahasa pemrograman Python.
 
@@ -46,12 +46,25 @@ parallel-computing/
 │   ├── b3_wordcount_mpi/               # B3: MPI Word Count ThreadPool vs ProcessPool (40 e-book Gutenberg)
 │   ├── tools/                          # Generator gambar pendukung (Amdahl, diagram C)
 │   └── docs/figs/                      # Gambar pendukung (amdahl_A2.png, diagram_c_fraud_hybrid.png)
-└── uts-practical-exam/                 # UTS: Praktikum Hybrid Web Simulation
-    ├── README.md                       # Dokumentasi lengkap UTS
-    ├── requirements.txt                # Dependensi UTS
-    ├── mock_server.py                  # Server mock API lokal (simulasi latency)
-    ├── web_simulation.py               # Simulasi hybrid Threads + ProcessPool
-    └── output/                         # Log, CSV hasil eksperimen, grafik
+├── uts-practical-exam/                 # UTS: Praktikum Hybrid Web Simulation
+│   ├── README.md                       # Dokumentasi lengkap UTS
+│   ├── requirements.txt                # Dependensi UTS
+│   ├── mock_server.py                  # Server mock API lokal (simulasi latency)
+│   ├── web_simulation.py               # Simulasi hybrid Threads + ProcessPool
+│   └── output/                         # Log, CSV hasil eksperimen, grafik
+└── task-5-remote-procedural-call/      # Tugas 5: XML-RPC, gRPC, Toleransi Kegagalan
+    ├── PANDUAN.md                      # Tutorial dari nol: konsep + cara menjalankan
+    ├── README.md                       # Ringkasan, quick start, hasil pengukuran
+    ├── requirements.txt                # grpcio, grpcio-tools, matplotlib
+    ├── docs/                           # Analisis, PRD, arsitektur, aturan, rencana
+    ├── praktikum1/                     # XML-RPC: server kalkulator + driver L1.1–L1.5
+    ├── grpc_app/                       # Kontrak .proto, server, client, server persisten
+    ├── old_stub/                       # Stub lama untuk uji kompatibilitas (L2.3)
+    ├── praktikum2/                     # gRPC: L2.0–L2.5
+    ├── praktikum3/                     # Concurrency/failure: L3.1–L3.6
+    ├── praktikum1/hasil/               # Log L1
+    ├── praktikum2/hasil/               # Log L2
+    └── praktikum3/hasil/               # Log L3, ringkasan JSON, grafik throughput
 ```
 
 ---
@@ -203,3 +216,35 @@ py uts-practical-exam\web_simulation.py
 ```
 
 > 📊 Output (log, `hasil_eksperimen.csv`, grafik speedup/waktu) tersimpan di `uts-practical-exam/output/`.
+
+---
+
+### 5. [Tugas 5 — Remote Procedure Calls (XML-RPC, gRPC, Toleransi Kegagalan)](task-5-remote-procedural-call/README.md)
+**Panduan dari nol (konsep client–server, port, dua terminal, cara membaca hasil): [PANDUAN.md](task-5-remote-procedural-call/PANDUAN.md).** Ringkasan: [README Tugas 5](task-5-remote-procedural-call/README.md).
+
+Implementasi tiga praktikum RPC, masing-masing dengan README cara menjalankan:
+- **[Praktikum 1 — XML-RPC](task-5-remote-procedural-call/praktikum1/README.md)**: server kalkulator `xmlrpc.server`, marshalling (190 B request untuk 12 B data), batas `int` 32-bit & `Fault`, latensi lokal vs RPC (9.539×), dan tiga skenario server mati + retry.
+- **[Praktikum 2 — gRPC + Protobuf](task-5-remote-procedural-call/praktikum2/README.md)**: kontrak `akademik.proto` (unary, server/client/bidirectional streaming), kompatibilitas field baru (`prodi` sebagai unknown field), ukuran payload 14–18× lebih kecil dari XML-RPC, serta pemanggilan async `.future()` (1.021 ms → 109 ms).
+- **[Praktikum 3 — Concurrency & Kegagalan](task-5-remote-procedural-call/praktikum3/README.md)**: idempotensi via `request_id` (at-most-once vs transfer berulang), race condition *lost update*, throughput vs jumlah worker (9,9 → 187 req/s), failover dua server, dan dedup RAM vs SQLite setelah restart.
+
+### Cara Menjalankan Tugas 5:
+
+```bash
+# Instalasi (venv khusus Tugas 5)
+cd task-5-remote-procedural-call
+python3 -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cd ..
+
+# Praktikum 1 — XML-RPC (satu driver, server otomatis)
+python3 task-5-remote-procedural-call/praktikum1/l1_all.py
+python3 task-5-remote-procedural-call/praktikum1/l1_all.py --bagian 2 4   # pilih bagian
+
+# Praktikum 2 — gRPC L2.0–L2.5
+python3 task-5-remote-procedural-call/praktikum2/l2_all.py
+
+# Praktikum 3 — concurrency & kegagalan (± 2–3 menit)
+python3 task-5-remote-procedural-call/praktikum3/l3_all.py
+```
+
+> 🔌 Mode dua terminal/dua komputer (XML-RPC port 8000, gRPC 50051) dijelaskan di [README Tugas 5](task-5-remote-procedural-call/README.md) dan README tiap praktikum.

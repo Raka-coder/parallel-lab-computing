@@ -1,0 +1,175 @@
+Server XML-RPC berjalan di http://0.0.0.0:8020
+Fungsi: akar, bagi, echo, kali, lambat, pangkat, statistik, system.listMethods, system.methodHelp, system.methodSignature, tambah
+Tekan Ctrl+C untuk berhenti.
+Server XML-RPC berjalan di http://0.0.0.0:8010
+Fungsi: akar, bagi, echo, kali, lambat, pangkat, statistik, system.listMethods, system.methodHelp, system.methodSignature, tambah
+Tekan Ctrl+C untuk berhenti.
+Server XML-RPC berjalan di http://0.0.0.0:8011
+Fungsi: akar, bagi, echo, kali, lambat, pangkat, statistik, system.listMethods, system.methodHelp, system.methodSignature, tambah
+Tekan Ctrl+C untuk berhenti.
+Server XML-RPC berjalan di http://0.0.0.0:8012
+Fungsi: akar, bagi, echo, kali, lambat, pangkat, statistik, system.listMethods, system.methodHelp, system.methodSignature, tambah
+Tekan Ctrl+C untuk berhenti.
+
+======================================================================
+L1.1 — pangkat & akar
+======================================================================
+pangkat(2, 10)  = 1024
+pangkat(2, 0.5) = 1.4142135623730951
+akar(144)       = 12.0
+akar(-4)        -> Fault: <class 'ValueError'>:Akar kuadrat bilangan negatif tidak terdefinisi
+
+======================================================================
+L1.2 — Marshalling XML-RPC & overhead format
+======================================================================
+
+--- methodCall tambah(5, 3) (190 byte) ---
+<?xml version='1.0'?>
+<methodCall>
+<methodName>tambah</methodName>
+<params>
+<param>
+<value><int>5</int></value>
+</param>
+<param>
+<value><int>3</int></value>
+</param>
+</params>
+</methodCall>
+
+
+--- methodResponse (121 byte) ---
+<?xml version='1.0'?>
+<methodResponse>
+<params>
+<param>
+<value><int>8</int></value>
+</param>
+</params>
+</methodResponse>
+
+
+| Pesan | Total | Data murni | Overhead | % overhead |
+|---|---|---|---|---|
+| Request  | 190 B | 8 B | 182 B | 95.8 % |
+| Response | 121 B | 4 B | 117 B | 96.7 % |
+| Total    | 311 B | 12 B | 299 B | 96.1 % |
+
+Catatan: header HTTP belum dihitung (biasanya 130-200 byte lagi per pesan).
+
+--- Request statistik (list -> <array>) (389 byte) ---
+<?xml version='1.0'?>
+<methodCall>
+<methodName>statistik</methodName>
+<params>
+<param>
+<value><array><data>
+<value><int>3</int></value>
+<value><int>1</int></value>
+<value><int>4</int></value>
+<value><int>1</int></value>
+<value><int>5</int></value>
+<value><int>9</int></value>
+<value><int>2</int></value>
+<value><int>6</int></value>
+</data></array></value>
+</param>
+</params>
+</methodCall>
+
+
+--- Response statistik (dict -> <struct>) (331 byte) ---
+<?xml version='1.0'?>
+<methodResponse>
+<params>
+<param>
+<value><struct>
+<member>
+<name>min</name>
+<value><int>1</int></value>
+</member>
+<member>
+<name>max</name>
+<value><int>9</int></value>
+</member>
+<member>
+<name>rata2</name>
+<value><double>3.875</double></value>
+</member>
+</struct></value>
+</param>
+</params>
+</methodResponse>
+
+
+Poin:
+- list  -> <array><data><value>...</value></data></array>
+- dict  -> <struct><member><name>..</name><value>..</value></member></struct>
+- float -> <double>; kunci dict WAJIB string (spesifikasi XML-RPC)
+- 8 angka memakai 389 byte; tiap elemen dibungkus beberapa tag,
+  sehingga ukuran tumbuh jauh lebih cepat daripada data sebenarnya.
+
+======================================================================
+L1.3 — Batas tipe data: datetime & bilangan > 2^31
+======================================================================
+
+--- Kirim datetime.datetime ---
+hasil : <DateTime '20261029T14:30:00' at 0x7fe9f9506900>
+tipe  : DateTime
+Penjelasan: XML-RPC punya tipe <dateTime.iso8601> sendiri.
+            Python mengembalikan wrapper xmlrpc.client.DateTime,
+            bukan datetime, kecuali dibuat dengan use_datetime=True.
+
+--- echo(2**31 - 1) = 2147483647 (muat int32) ---
+hasil : 2147483647
+tipe  : int
+
+--- echo(2**31) = 2147483648 ---
+ERROR di client  : OverflowError: int exceeds XML-RPC limits
+
+--- echo(2**40) = 1099511627776 ---
+ERROR di client  : OverflowError: int exceeds XML-RPC limits
+Penjelasan: <int>/<i4> hanya 32-bit bertanda. OverflowError terjadi
+            di CLIENT saat marshalling, sebelum dikirim.
+
+--- pangkat(2, 40) — argumen kecil, hasil kebesaran ---
+FAULT (dari server): <class 'OverflowError'>:int exceeds XML-RPC limits
+Penjelasan: kali ini error terjadi di SERVER saat marshalling HASIL.
+
+--- pangkat(2.0, 40) — pakai <double> ---
+hasil : 1099511627776.0
+tipe  : float
+Penjelasan: <double> 64-bit sanggup menyimpan hasil ini.
+
+Solusi untuk bilangan besar: kirim sebagai string (konversi manual),
+atau float bila presisi di atas 2^53 tidak dibutuhkan.
+
+======================================================================
+L1.4 — 100 panggilan tambah(), median 5 putaran
+======================================================================
+Lingkungan: SATU MESIN (localhost)
+Lokal     : total   0.0190 ms | per panggilan    0.190 us
+XML-RPC   : total 207.2604 ms | per panggilan 2072.604 us
+Rasio     : XML-RPC 10,910x lebih lambat
+Sampel RPC per putaran (ms): [226.383, 230.321, 200.192, 207.26, 199.232]
+
+Biaya RPC bukan dari penjumlahan, melainkan serialisasi XML,
+HTTP, system call socket, dan context switch antar proses.
+
+======================================================================
+L1.5 — Server mati: ConnectionRefused, RemoteDisconnected, dan retry
+======================================================================
+
+--- Skenario 1 — server mati SEBELUM panggilan ---
+Exception: ConnectionRefusedError: [Errno 111] Connection refused
+
+--- Skenario 2 — server mati SAAT panggilan berjalan (lambat 5 s) ---
+Hasil: RemoteDisconnected: Remote end closed connection without response
+Catatan: client TIDAK tahu apakah lambat() sempat dieksekusi di server.
+
+--- Skenario 3 — server dihidupkan lagi, client retry ---
+Memanggil tambah(40, 2) dengan retry maksimal 5x ...
+Berhasil: tambah(40, 2) = 42
+
+Selesai. Simpan keluaran ke praktikum1/hasil/ bila perlu:
+  python praktikum1/l1_all.py 2>&1 | tee praktikum1/hasil/l1_all.txt

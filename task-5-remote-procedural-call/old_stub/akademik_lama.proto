@@ -1,0 +1,24 @@
+// Salinan kontrak VERSI LAMA untuk L2.3 (uji kompatibilitas ke belakang).
+//
+// Perbedaan dengan akademik.proto versi baru:
+//   - hanya punya field 1..3 pada Mahasiswa (belum ada `string prodi = 4`)
+//   - package sengaja berbeda (`akademiklama`) agar tidak bentrok dengan
+//     descriptor protobuf versi baru di proses yang sama.
+//
+// Klien lama tetap memanggil method yang sama di server baru:
+//   /akademik.LayananNilai/GetMahasiswa
+// (lihat klien_lama.py). Server membalas dengan field 4 yang tidak dikenal
+// oleh skema lama; protobuf menyimpannya sebagai unknown field.
+syntax = "proto3";
+
+package akademiklama;
+
+message Mahasiswa {
+  string nim = 1;
+  string nama = 2;
+  double ipk = 3;
+}
+
+message MahasiswaRequest {
+  string nim = 1;
+}

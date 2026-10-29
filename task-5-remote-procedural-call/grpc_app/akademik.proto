@@ -1,0 +1,81 @@
+// Kontrak layanan akademik untuk Praktikum 2 dan 3.
+// Aturan evolusi skema: JANGAN mengubah/memakai ulang nomor field.
+// Menambah data = field baru dengan nomor baru (contoh: prodi = 4).
+syntax = "proto3";
+
+package akademik;
+
+service LayananNilai {
+  // Unary: satu permintaan, satu balasan.
+  rpc GetMahasiswa(MahasiswaRequest) returns (Mahasiswa);
+
+  // Unary: menyimpan/menimpa nilai satu mata kuliah.
+  rpc TambahNilai(NilaiRequest) returns (StatusResponse);
+
+  // Server streaming: server mengirim banyak nilai secara bertahap.
+  rpc StreamNilai(MahasiswaRequest) returns (stream Nilai);
+
+  // Client streaming: client mengirim banyak nilai, server membalas sekali.
+  rpc KirimBanyakNilai(stream NilaiRequest) returns (StatusResponse);
+
+  // Bidirectional streaming: percakapan dua arah (ruang diskusi).
+  rpc Diskusi(stream Pesan) returns (stream Pesan);
+
+  // Unary, TIDAK idempoten: wajib dilindungi request_id.
+  rpc Transfer(TransferRequest) returns (StatusResponse);
+
+  // Unary: verifikasi saldo (dipakai eksperimen Praktikum 3).
+  rpc GetSaldo(SaldoRequest) returns (SaldoResponse);
+}
+
+message Mahasiswa {
+  string nim = 1;
+  string nama = 2;
+  double ipk = 3;
+  // Field baru (L2.3): client lama yang tidak mengenal nomor 4 tetap berjalan.
+  string prodi = 4;
+}
+
+message MahasiswaRequest {
+  string nim = 1;
+}
+
+message Nilai {
+  string mata_kuliah = 1;
+  double nilai = 2;
+}
+
+message NilaiRequest {
+  string nim = 1;
+  string mata_kuliah = 2;
+  double nilai = 3;
+}
+
+message StatusResponse {
+  bool sukses = 1;
+  string pesan = 2;
+  // Ditambahkan agar jumlah dapat dibaca sebagai angka, bukan hasil parsing teks.
+  int32 jumlah = 3;
+}
+
+message Pesan {
+  string pengirim = 1;
+  string isi = 2;
+}
+
+message TransferRequest {
+  // request_id dibuat SEKALI per operasi logis, dipakai ulang saat retry.
+  string request_id = 1;
+  string dari = 2;
+  string ke = 3;
+  int64 jumlah = 4;
+}
+
+message SaldoRequest {
+  string akun = 1;
+}
+
+message SaldoResponse {
+  string akun = 1;
+  int64 saldo = 2;
+}

@@ -1,0 +1,68 @@
+
+==========================================================================
+L3.1 — Retry dengan request_id TETAP (efek: sekali saja / at-most-once)
+==========================================================================
+Run 1: RPC=31 (retry 11), gagal=0, A=800, B=700, total=1500
+Run 2: RPC=25 (retry 5), gagal=0, A=800, B=700, total=1500
+
+Harapan: A=800 (1000-200), B=700, total=1500.
+Retry menemukan request_id di PROSES -> balasan sama, TANPA transfer ulang.
+
+==========================================================================
+L3.2 — request_id BARU setiap percobaan (efek: transfer berulang)
+==========================================================================
+Run 1: transfer sampai ke server=29, dilaporkan gagal=0, A=710, B=790, total=1500
+Run 2: transfer sampai ke server=27, dilaporkan gagal=0, A=730, B=770, total=1500
+
+Harapan seharusnya A=800. Setiap timeout memakai ID baru -> server
+menganggap permintaan berbeda dan mengeksekusi transfer lagi.
+
+==========================================================================
+L3.3 — Tanpa lock: race condition (harapan A=500, B=1000, total=1500)
+==========================================================================
+dengan lock                     : A= 500 B=1000 total=1500  (0.04s)
+tanpa lock                      : A= 500 B=1000 total=1500  (0.04s)
+tanpa lock + jendela 2 ms       : A= 850 B= 650 total=1500  (0.06s)
+dengan lock + jendela 2 ms      : A= 500 B=1000 total=1500  (0.13s)
+
+Catatan jujur: menghapus lock saja sering TIDAK memunculkan kerusakan
+pada CPython (GIL + critical section sangat pendek). Jendela baca->tulis
+2 ms memperbesar peluang dan membuktikan bug-nya nyata (lost update).
+
+==========================================================================
+L3.4 — Throughput vs max_workers (200 GetMahasiswa, server tidur 0,1 s)
+==========================================================================
+workers= 1:  20.27s |     9.9 req/s | latensi    1930 ms
+workers= 4:   5.08s |    39.4 req/s | latensi     487 ms
+workers=10:   2.05s |    97.8 req/s | latensi     198 ms
+workers=20:   1.07s |   187.3 req/s | latensi     104 ms
+
+Teori throughput ~ max_workers / 0,1 s (10/40/100/200 req/s).
+Latensi naik saat worker sedikit karena permintaan mengantre (Hukum Little).
+Grafik disimpan: praktikum3/hasil/l3_4_throughput.png
+
+==========================================================================
+L3.5 — Failover: client berpindah server saat UNAVAILABLE
+==========================================================================
+  sebelum server-1 mati #1: 127.0.0.1:50051 -> Andi
+  sebelum server-1 mati #2: 127.0.0.1:50051 -> Andi
+  sebelum server-1 mati #3: 127.0.0.1:50051 -> Andi
+  (server-1 dimatikan)
+  setelah server-1 mati #1: 127.0.0.1:50052 -> Andi
+  setelah server-1 mati #2: 127.0.0.1:50052 -> Andi
+  setelah server-1 mati #3: 127.0.0.1:50052 -> Andi
+
+Failover aman untuk GetMahasiswa (idempoten). Untuk Transfer, server
+kedua tidak berbagi PROSES/SALDO -> butuh state bersama/replikasi.
+
+==========================================================================
+Analisis P3 — Server restart: dedup RAM vs dedup SQLite
+==========================================================================
+dedup=ram   : A=900 -> retry -> A=800 (transfer terjadi 2x)
+dedup=sqlite: A=900 -> retry -> A=900 (transfer terjadi 1x)
+
+Kesimpulan: dedup di RAM kehilangan jaminan at-most-once setelah restart.
+Perbaikan: saldo + log request_id di SQLite, ditulis dalam SATU transaksi
+atomik (BEGIN IMMEDIATE). Yang dicapai: at-least-once + dedup = effectively-once.
+
+Ringkasan angka disimpan: praktikum3/hasil/l3_ringkasan.json

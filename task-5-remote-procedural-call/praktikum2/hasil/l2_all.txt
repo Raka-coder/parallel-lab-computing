@@ -1,0 +1,60 @@
+
+======================================================================
+L2.0 — Stub hasil generate protoc
+======================================================================
+Client stub  : akademik_pb2_grpc.LayananNilaiStub
+Server stub  : akademik_pb2_grpc.LayananNilaiServicer
+Message      : nim, nama, ipk, prodi
+Method RPC   : GetMahasiswa, TambahNilai, StreamNilai, KirimBanyakNilai, Diskusi, Transfer, GetSaldo
+
+- LayananNilaiStub  : dipakai client; tiap RPC menjadi atribut yang bisa dipanggil.
+- LayananNilaiServicer: kelas dasar server; method default melempar UNIMPLEMENTED.
+
+======================================================================
+L2.1 — Client streaming KirimBanyakNilai (100 valid + 1 tidak valid)
+======================================================================
+sukses=False jumlah=100 pesan='100 nilai tersimpan, 1 ditolak'
+Satu generator, satu respons: server menghitung yang valid dan menolak 999.
+
+======================================================================
+L2.2 — Bidirectional streaming Diskusi (dua client)
+======================================================================
+  Andi menerima: [('Sari', 'Halo Andi, 90. Kamu?')]
+  Sari menerima: [('Andi', 'Halo Sari, nilai tugasmu berapa?')]
+
+Pengirim tidak menerima pesannya sendiri; setiap peserta punya antrean.
+
+======================================================================
+L2.3 — Backward compatibility: client LAMA vs server BARU
+======================================================================
+Field di stub lama : ['nim', 'nama', 'ipk']
+Client lama menerima: Andi 3.26 | punya atribut prodi? False
+Unknown field tersimpan (hex): 0a07323032333030311204416e64691914ae47e17a140a40220b496e666f726d6174696b61
+Field 4 'Informatika' tetap ada di bytes? True
+
+Alasan: Protobuf mengenali field lewat NOMOR, bukan nama/urutan.
+Penerima yang tidak mengenal nomor 4 mengabaikannya (unknown field).
+Aturan: jangan ubah/pakai ulang nomor field; hanya tambah nomor baru.
+
+======================================================================
+L2.4 — Ukuran Protobuf vs XML-RPC (payload, tanpa header)
+======================================================================
+| Pesan | Protobuf | XML-RPC | Rasio |
+|---|---|---|---|
+| Response Mahasiswa | 24 B | 350 B | 14.6x |
+| Response + prodi   | 37 B | 350 B | 9.5x |
+| Request satu NIM   | 9 B | 163 B | 18.1x |
+
+Rincian Protobuf: nama field tidak dikirim (hanya nomor), angka biner.
+gRPC menambah framing 5 B/pesan + HTTP/2 (HPACK); XML-RPC menambah
+header HTTP/1.x teks. Rasio total tetap jauh lebih kecil di Protobuf.
+
+======================================================================
+L2.5 — Pemanggilan asinkron .future() (server get-delay 0,1 s)
+======================================================================
+Sinkron 10x          :  1029.3 ms
+Asinkron kirim 10x   :     4.3 ms (non-blocking)
+Asinkron total+result:   109.7 ms | nama={'Andi'}
+Client tidak menunggu satu per satu; server memproses paralel.
+
+Selesai. Salin keluaran ini (atau jalankan dengan | tee) untuk laporan.
