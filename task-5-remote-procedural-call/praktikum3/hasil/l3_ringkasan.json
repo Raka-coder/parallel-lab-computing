@@ -2,8 +2,8 @@
   "L3.1": [
     {
       "run": 1,
-      "percobaan": 25,
-      "retry": 5,
+      "percobaan": 27,
+      "retry": 7,
       "gagal": 0,
       "A": 800,
       "B": 700,
@@ -11,8 +11,8 @@
     },
     {
       "run": 2,
-      "percobaan": 28,
-      "retry": 8,
+      "percobaan": 26,
+      "retry": 6,
       "gagal": 0,
       "A": 800,
       "B": 700,
@@ -22,22 +22,22 @@
   "L3.2": [
     {
       "run": 1,
-      "percobaan": 31,
-      "retry": 11,
-      "transfer_terjadi": 31,
-      "dilaporkan_gagal": 0,
-      "A": 690,
-      "B": 810,
+      "percobaan": 28,
+      "retry": 8,
+      "transfer_terjadi": 28,
+      "dilaporkan_gagal": 1,
+      "A": 720,
+      "B": 780,
       "total": 1500
     },
     {
       "run": 2,
-      "percobaan": 26,
-      "retry": 6,
-      "transfer_terjadi": 26,
+      "percobaan": 25,
+      "retry": 5,
+      "transfer_terjadi": 25,
       "dilaporkan_gagal": 0,
-      "A": 740,
-      "B": 760,
+      "A": 750,
+      "B": 750,
       "total": 1500
     }
   ],
@@ -47,19 +47,19 @@
       "A": 500,
       "B": 1000,
       "total": 1500,
-      "detik": 0.04
+      "detik": 0.03
     },
     {
       "konfigurasi": "tanpa lock",
       "A": 500,
       "B": 1000,
       "total": 1500,
-      "detik": 0.04
+      "detik": 0.03
     },
     {
       "konfigurasi": "tanpa lock + jendela 2 ms",
-      "A": 880,
-      "B": 620,
+      "A": 900,
+      "B": 600,
       "total": 1500,
       "detik": 0.04
     },
@@ -74,27 +74,27 @@
   "L3.4": [
     {
       "workers": 1,
-      "detik": 20.239663854499668,
-      "throughput": 9.88158703813513,
-      "latensi_ms": 1926.8285524098974
+      "detik": 20.193453392501397,
+      "throughput": 9.904200503722118,
+      "latensi_ms": 1922.756800552288
     },
     {
       "workers": 4,
-      "detik": 5.067056242498438,
-      "throughput": 39.470654126037644,
-      "latensi_ms": 485.5773554474581
+      "detik": 5.06459409550007,
+      "throughput": 39.48985506237237,
+      "latensi_ms": 485.16455383485663
     },
     {
       "workers": 10,
-      "detik": 2.0399969774989586,
-      "throughput": 98.03936473587456,
-      "latensi_ms": 197.76370509996923
+      "detik": 2.0471720764981,
+      "throughput": 97.69577514512315,
+      "latensi_ms": 198.40010060761415
     },
     {
       "workers": 20,
-      "detik": 1.0574623435004469,
-      "throughput": 189.1322979553282,
-      "latensi_ms": 103.92440708744289
+      "detik": 1.0585820484957367,
+      "throughput": 188.93762371096807,
+      "latensi_ms": 103.81580861998373
     }
   ],
   "L3.5": [

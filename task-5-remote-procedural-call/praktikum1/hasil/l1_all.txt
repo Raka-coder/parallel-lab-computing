@@ -1,15 +1,12 @@
-Server XML-RPC berjalan di http://0.0.0.0:8020
-Fungsi: akar, bagi, echo, kali, lambat, pangkat, statistik, system.listMethods, system.methodHelp, system.methodSignature, tambah
-Tekan Ctrl+C untuk berhenti.
-Server XML-RPC berjalan di http://0.0.0.0:8010
-Fungsi: akar, bagi, echo, kali, lambat, pangkat, statistik, system.listMethods, system.methodHelp, system.methodSignature, tambah
-Tekan Ctrl+C untuk berhenti.
-Server XML-RPC berjalan di http://0.0.0.0:8011
-Fungsi: akar, bagi, echo, kali, lambat, pangkat, statistik, system.listMethods, system.methodHelp, system.methodSignature, tambah
-Tekan Ctrl+C untuk berhenti.
-Server XML-RPC berjalan di http://0.0.0.0:8012
-Fungsi: akar, bagi, echo, kali, lambat, pangkat, statistik, system.listMethods, system.methodHelp, system.methodSignature, tambah
-Tekan Ctrl+C untuk berhenti.
+================================================================================
+  KOMPUTASI PARALEL & TERDISTRIBUSI
+  Praktikum Remote Procedure Calls (RPC)
+================================================================================
+  MAHASISWA   : Raka Restu Saputra
+  NIM         : 247006111172
+  KELAS       : F
+================================================================================
+
 
 ======================================================================
 L1.1 — pangkat & akar
@@ -114,7 +111,7 @@ L1.3 — Batas tipe data: datetime & bilangan > 2^31
 ======================================================================
 
 --- Kirim datetime.datetime ---
-hasil : <DateTime '20261029T14:30:00' at 0x7fe9f9506900>
+hasil : <DateTime '20261029T14:30:00' at 0x7fef52482a50>
 tipe  : DateTime
 Penjelasan: XML-RPC punya tipe <dateTime.iso8601> sendiri.
             Python mengembalikan wrapper xmlrpc.client.DateTime,
@@ -148,10 +145,10 @@ atau float bila presisi di atas 2^53 tidak dibutuhkan.
 L1.4 — 100 panggilan tambah(), median 5 putaran
 ======================================================================
 Lingkungan: SATU MESIN (localhost)
-Lokal     : total   0.0190 ms | per panggilan    0.190 us
-XML-RPC   : total 207.2604 ms | per panggilan 2072.604 us
-Rasio     : XML-RPC 10,910x lebih lambat
-Sampel RPC per putaran (ms): [226.383, 230.321, 200.192, 207.26, 199.232]
+Lokal     : total   0.0089 ms | per panggilan    0.089 us
+XML-RPC   : total 133.0664 ms | per panggilan 1330.664 us
+Rasio     : XML-RPC 14,884x lebih lambat
+Sampel RPC per putaran (ms): [139.229, 133.066, 136.664, 118.583, 119.948]
 
 Biaya RPC bukan dari penjumlahan, melainkan serialisasi XML,
 HTTP, system call socket, dan context switch antar proses.

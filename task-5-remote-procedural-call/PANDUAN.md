@@ -242,7 +242,7 @@ Yang dibuktikan tiap skrip:
 | `--bagian 1` | Memanggil `pangkat` dan `akar` | `pangkat(2,10)=1024`; `akar(-4)` → `Fault` |
 | `--bagian 2` | Mengukur panjang XML untuk `tambah(5,3)` | request **190 B**, response **121 B**, padahal datanya hanya 12 B → overhead **96,1 %** |
 | `--bagian 3` | `datetime`, `2**31`, `2**40`, `pangkat(2,40)`, `pangkat(2.0,40)` | `DateTime` wrapper; `OverflowError` di client (int XML-RPC 32-bit); `Fault` di server saat marshalling hasil; `double` berhasil |
-| `--bagian 4` | 100× panggilan lokal vs 100× panggilan RPC | lokal **±0,1–0,19 µs**, RPC **±1,9–2,1 ms** → **±11.000–19.000×** lebih lambat; `--verbose` ±2× lebih lambat |
+| `--bagian 4` | 100× panggilan lokal vs 100× panggilan RPC | lokal **±0,06–0,19 µs**, RPC **±1,9–2,1 ms** → **±11.000–32.000×** lebih lambat; via Podman **±1,7–1,9 ms** (**±24.000–31.000×**); `--verbose` ±2× lebih lambat |
 | `--bagian 5` | Mematikan server di tiga titik berbeda | `ConnectionRefusedError`, `RemoteDisconnected`, lalu retry berhasil menghasilkan `42` |
 
 ### 7d. L1.4 versi dua komputer (sesuai lembar latihan)
@@ -275,6 +275,39 @@ python praktikum1/client_kalkulator.py --host 192.168.1.10
 Skrip akan **menguji koneksi dulu**; kalau gagal ia mencetak penyebab yang harus diperiksa (server belum jalan, bind ke `127.0.0.1`, firewall, atau IP salah) dan berhenti dengan kode 2. Pada mode ini skrip **tidak** menyalakan server lokal — yang diukur benar-benar lalu lintas jaringan.
 
 Cara membaca hasil: baris `Lingkungan: JARINGAN (...)` menandakan mode dua komputer. Rasio RPC/lokal akan jauh lebih besar daripada localhost karena bertambahnya latency jaringan (biasanya 0,3–2 ms per panggilan di WiFi).
+
+### 7e. Alternatif tanpa komputer kedua: Podman
+
+Kalau hanya ada satu komputer, container Podman bisa menjadi "perangkat kedua":
+container punya **namespace jaringan sendiri** (bukan `lo` host), sehingga traffic
+RPC melewati TCP/IP stack virtual. Ini bukan pengganti sempurna untuk dua mesin
+fisik, tetapi memenuhi syarat pengujian lintas jaringan secara akademis.
+
+Prasyarat: Podman terpasang (`podman --version`). Image `python:3.12-alpine`
+diambil otomatis saat pertama kali dijalankan (±50 MB).
+
+```bash
+# cara singkat: driver menyiapkan network, server, container, dan ringkasan
+python praktikum1/l1_all.py --bagian 4 --use-podman
+
+# atau jalankan skripnya langsung
+./praktikum1/test_l1_4_podman.sh
+PORT=8020 N=200 ./praktikum1/test_l1_4_podman.sh
+```
+
+Skrip membuat network `rpc-test-net`, memakai `host.containers.internal`
+(atau gateway network) sebagai alamat host, lalu menjalankan 100× `tambah(5,3)`
+dari dalam container. Bila belum ada server yang melayani, skrip menyalakan
+`server_kalkulator.py --host 0.0.0.0` di port bebas dan mematikannya lagi.
+Jangan pakai `--verbose` saat benchmark.
+
+Hasil di mesin ini: **±1,7–1,9 ms/panggilan** dari container versus **±0,06–0,19 µs**
+lokal (±24.000–31.000×). Log lengkap ditulis ke `praktikum1/hasil/l1_4_podman.txt`.
+
+> Catatan akademik: container berbagi kernel dan CPU dengan host, jadi latency
+> tidak sebesar jaringan WiFi/LAN sungguhan. Yang dibuktikan adalah biaya
+> serialisasi XML + HTTP + socket + lintas namespace jaringan, bukan komputasi
+> `tambah()` itu sendiri.
 
 **Kesimpulan Praktikum 1:** RPC itu mudah dipakai, tetapi mahal dan bisa gagal. Program yang memakai RPC wajib menangani timeout, retry, dan server yang mati.
 

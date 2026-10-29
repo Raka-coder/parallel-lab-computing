@@ -1,3 +1,12 @@
+================================================================================
+  KOMPUTASI PARALEL & TERDISTRIBUSI
+  Praktikum Remote Procedure Calls (RPC)
+================================================================================
+  MAHASISWA   : Raka Restu Saputra
+  NIM         : 247006111172
+  KELAS       : F
+================================================================================
+
 
 ======================================================================
 L2.0 — Stub hasil generate protoc
@@ -52,9 +61,9 @@ header HTTP/1.x teks. Rasio total tetap jauh lebih kecil di Protobuf.
 ======================================================================
 L2.5 — Pemanggilan asinkron .future() (server get-delay 0,1 s)
 ======================================================================
-Sinkron 10x          :  1029.3 ms
-Asinkron kirim 10x   :     4.3 ms (non-blocking)
-Asinkron total+result:   109.7 ms | nama={'Andi'}
+Sinkron 10x          :  1018.7 ms
+Asinkron kirim 10x   :     3.0 ms (non-blocking)
+Asinkron total+result:   108.7 ms | nama={'Andi'}
 Client tidak menunggu satu per satu; server memproses paralel.
 
 Selesai. Salin keluaran ini (atau jalankan dengan | tee) untuk laporan.

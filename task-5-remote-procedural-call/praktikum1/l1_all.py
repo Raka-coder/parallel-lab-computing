@@ -8,6 +8,9 @@ Jalankan sebagian (satu atau beberapa bagian sekaligus):
     python praktikum1/l1_all.py --bagian 2 4
     python praktikum1/l1_all.py --bagian 1 3 4 5
 
+Uji L1.4 via Podman (tanpa komputer kedua):
+    python praktikum1/l1_all.py --bagian 4 --use-podman
+
 Uji dua komputer (L1.1-L1.4):
     # komputer A
     python praktikum1/server_kalkulator.py --host 0.0.0.0
@@ -25,6 +28,7 @@ Pemetaan bagian:
 from __future__ import annotations
 
 import argparse
+import os
 import statistics
 import subprocess
 import sys
@@ -33,6 +37,10 @@ import time
 import xmlrpc.client
 from datetime import datetime
 
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from banner import cetak_identitas  # noqa: E402
 from server_util import (
     DIR_INI,
     HOST_LOKAL,
@@ -48,6 +56,7 @@ from server_util import (
 N_PANGGILAN = 100
 N_PUTARAN = 5
 BAGIAN = (1, 2, 3, 4, 5)
+HASIL = DIR_INI / "hasil"
 
 
 def judul(teks: str) -> None:
@@ -196,6 +205,56 @@ def l1_4(server: xmlrpc.client.ServerProxy, host: str, putaran: int) -> None:
     print("HTTP, system call socket, dan context switch antar proses.")
 
 
+def l1_4_podman(port: int, putaran: int) -> None:
+    """L1.4 dengan container Podman sebagai "komputer kedua"."""
+    judul("L1.4 — benchmark lintas jaringan: host vs container Podman")
+    print("Lingkungan: HOST (server) <-> PODMAN CONTAINER (client)")
+    print("Container punya namespace jaringan sendiri, jadi traffic tidak lewat lo.")
+
+    median_lokal, _ = _ukur(_tambah_lokal, putaran)
+    per_lokal = median_lokal / N_PANGGILAN
+
+    skrip = DIR_INI / "test_l1_4_podman.sh"
+    if not skrip.exists():
+        raise SystemExit(f"skrip tidak ditemukan: {skrip}")
+
+    lingkungan = dict(os.environ, PORT=str(port), N=str(N_PANGGILAN), LEWATI_IDENTITAS="1")
+    proses = subprocess.run(
+        ["bash", str(skrip)],
+        cwd=DIR_INI.parent,
+        env=lingkungan,
+        capture_output=True,
+        text=True,
+    )
+    keluaran = proses.stdout + proses.stderr
+    print()
+    print(keluaran.rstrip())
+
+    HASIL.mkdir(exist_ok=True)
+    catatan = (
+        f"L1.4 PODMAN — lokal {per_lokal * 1e6:.3f} us/panggilan, "
+        f"port {port}, {N_PANGGILAN} request\n\n{keluaran}"
+    )
+    (HASIL / "l1_4_podman.txt").write_text(catatan, encoding="utf-8")
+
+    if proses.returncode != 0:
+        raise SystemExit(proses.returncode)
+
+    baris = [b for b in keluaran.splitlines() if b.startswith("PODMAN_AVG_MS=")]
+    if not baris:
+        print("\nPERINGATAN: skrip tidak mengembalikan PODMAN_AVG_MS; angka tidak dirangkum.")
+        return
+    per_podman = float(baris[-1].split("=", 1)[1]) / 1000.0
+
+    print()
+    print(f"Lokal (host)       : {per_lokal * 1e6:8.3f} us/panggilan")
+    print(f"Podman (container) : {per_podman * 1e6:8.3f} us/panggilan")
+    print(f"Rasio              : container {per_podman / per_lokal:,.1f}x lebih lambat")
+    print("\nKesimpulan: RPC lintas namespace jaringan tetap jauh lebih lambat")
+    print("daripada pemanggilan fungsi lokal; biayanya ada pada serialisasi XML,")
+    print("HTTP, socket, dan perpindahan paket, bukan pada komputasi tambah().")
+
+
 # ---------------------------------------------------------------------------
 # L1.5 — server mati di tiga titik
 # ---------------------------------------------------------------------------
@@ -210,6 +269,8 @@ def nyalakan_server(port: int) -> subprocess.Popen:
     proses = subprocess.Popen(
         [sys.executable, str(DIR_INI / "server_kalkulator.py"), "--port", str(port)],
         cwd=DIR_INI,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     tunggu_port(HOST_LOKAL, port)
     time.sleep(0.2)
@@ -266,6 +327,7 @@ def l1_5() -> None:
 
 # ---------------------------------------------------------------------------
 def main() -> None:
+    cetak_identitas()
     parser = argparse.ArgumentParser(description="Praktikum 1 — semua latihan XML-RPC")
     parser.add_argument(
         "--bagian",
@@ -280,14 +342,20 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=PORT_DEFAULT)
     parser.add_argument("--putaran", type=int, default=N_PUTARAN,
                         help="jumlah ulangan benchmark L1.4 (default 5)")
+    parser.add_argument("--use-podman", action="store_true",
+                        help="L1.4: ukur dari container Podman (pengganti komputer kedua)")
     args = parser.parse_args()
 
     bagian = sorted(set(args.bagian)) if args.bagian else list(BAGIAN)
     terpencil = args.host not in ("127.0.0.1", "localhost")
-    butuh_server = bool({1, 3, 4} & set(bagian))
+    butuh_server = bool({1, 3} & set(bagian)) or (4 in bagian and not args.use_podman)
 
     if 5 in bagian and terpencil:
         parser.error("L1.5 mematikan/menyalakan server lokal, jadi tidak bisa dipakai dengan --host jauh")
+    if args.use_podman and terpencil:
+        parser.error("--use-podman membandingkan host dan container di mesin yang sama; jangan digabung --host jauh")
+    if args.use_podman and 4 not in bagian:
+        parser.error("--use-podman hanya berlaku untuk --bagian 4")
 
     server = proses = None
     if butuh_server:
@@ -312,7 +380,10 @@ def main() -> None:
         if 3 in bagian:
             l1_3(server)
         if 4 in bagian:
-            l1_4(server, args.host, args.putaran)
+            if args.use_podman:
+                l1_4_podman(args.port, args.putaran)
+            else:
+                l1_4(server, args.host, args.putaran)
     finally:
         hentikan(proses)
 

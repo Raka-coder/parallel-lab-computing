@@ -34,6 +34,9 @@ HASIL = Path(__file__).resolve().parent / "hasil"
 if str(GRPC_APP) not in sys.path:
     sys.path.insert(0, str(GRPC_APP))
 
+sys.path.insert(0, str(ROOT))
+from banner import cetak_identitas  # noqa: E402
+
 import akademik_pb2 as pb  # noqa: E402
 import akademik_pb2_grpc as pb_grpc  # noqa: E402
 from klien import FailoverClient, ambil_saldo, transfer, transfer_id_baru  # noqa: E402
@@ -427,6 +430,7 @@ def l3_6() -> list[dict]:
 
 # ---------------------------------------------------------------------------
 def main() -> None:
+    cetak_identitas()
     global TAMPILKAN_LOG_SERVER
     parser = argparse.ArgumentParser(description="Praktikum 3 — semua skenario")
     parser.add_argument(

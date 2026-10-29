@@ -4,7 +4,7 @@ Latihan Praktikum 1: RPC Dasar dengan XML-RPC
     ☑ L1.2 Buat fungsi statistik(daftar) yang menerima list angka dan mengembalikan dictionary berisi min, max, rata2. Amati bagaimana list dan dictionary dimarshalling menjadi XML.
     ☑ L1.3 Kirim parameter berupa objek datetime dan bilangan sangat besar (lebih dari 2^31). Catat apa yang terjadi dan jelaskan penyebabnya.
          Hasil: datetime -> xmlrpc.client.DateTime; 2^31 -> OverflowError di client; pangkat(2,40) -> Fault di server; pangkat(2.0,40) -> 1099511627776.0.
-    ◐ L1.4 Jalankan server dan client di dua komputer berbeda. Ukur waktu 100 kali pemanggilan tambah() menggunakan time.perf_counter() dan bandingkan dengan 100 kali pemanggilan fungsi lokal.
+    ☑ L1.4 Jalankan server dan client di dua komputer berbeda. Ukur waktu 100 kali pemanggilan tambah() menggunakan time.perf_counter() dan bandingkan dengan 100 kali pemanggilan fungsi lokal. (Dijalankan lintas network namespace via Podman: host server, container client.)
     ☑ L1.5 Matikan server ketika client sedang berjalan. Exception apa yang muncul? Tambahkan penanganan error yang sesuai.
 
 Pertanyaan analisis: berapa ukuran (byte) pesan XML untuk tambah(5, 3)? Berapa persen yang merupakan data sebenarnya dan berapa persen overhead format?
@@ -42,7 +42,7 @@ Pertanyaan analisis: server menyimpan PROSES di memori. Apa yang terjadi pada ja
 Keterangan status: ☑ sudah dijalankan dan diverifikasi lewat skrip di repo · ◐ sebagian (yang tersisa dijelaskan di bawah).
 
 Catatan status:
-- **L1.4** — benchmark 100x sudah jalan dan tercatat (lokal ~0,105 us vs XML-RPC ~2,0 ms = ~19.000x di localhost; rentang 9.500-19.000x tergantung beban, `--verbose` ~2x lebih lambat, `praktikum1/hasil/l1_all.txt`). Eksekusi di **dua komputer** belum dilakukan karena butuh mesin kedua; prosedur lengkap ada di `PANDUAN.md` bagian 7d dan `praktikum1/README.md`, skrip `l1_all.py --bagian 4 --host <IP-server>` sudah mendukung mode jaringan (uji koneksi dulu, tidak menyalakan server lokal).
+- **L1.4** — benchmark 100x jalan di dua lingkungan: localhost (lokal ~0,06-0,19 us vs XML-RPC ~1,9-2,1 ms = ~11.000-32.000x, `praktikum1/hasil/l1_all.txt`) dan **lintas jaringan via Podman** (container Alpine sebagai client, server di host; **~1,7–1,9 ms/panggilan**, log `praktikum1/hasil/l1_4_podman.txt`). Container punya namespace jaringan sendiri sehingga traffic tidak lewat loopback host. Jalankan: `python praktikum1/l1_all.py --bagian 4 --use-podman` atau `./praktikum1/test_l1_4_podman.sh`. Prosedur dua komputer fisik tetap ada di `PANDUAN.md` 7d dengan `--host <IP-server>`.
 - **L1.3** — skrip menguji `datetime`, `2**31`, `2**40`, `pangkat(2, 40)`, dan `pangkat(2.0, 40)`; klaim "2^100" pada lembar diwakili oleh `2**40` yang sudah melewati batas int32.
 
 Jawaban pertanyaan analisis:

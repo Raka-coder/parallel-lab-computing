@@ -96,7 +96,13 @@ def pastikan_server(
         perintah = [sys.executable, str(DIR_INI / "server_kalkulator.py"), "--port", str(port)]
         if verbose_server:
             perintah.append("--verbose")
-        proses = subprocess.Popen(perintah, cwd=DIR_INI)
+        keluaran = None if verbose_server else subprocess.DEVNULL
+        proses = subprocess.Popen(
+            perintah,
+            cwd=DIR_INI,
+            stdout=keluaran,
+            stderr=keluaran,
+        )
         tunggu_port(host, port)
         return proxy(host, port, timeout=timeout), proses
     return proxy(host, port, timeout=timeout), None

@@ -40,7 +40,14 @@ def ambil_mahasiswa_lama(host: str, port: int, nim: str, timeout: float = 5.0) -
         return panggil(lama.MahasiswaRequest(nim=nim), timeout=timeout)
 
 
+import sys as _sys
+from pathlib import Path as _Path
+
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
+from banner import cetak_identitas  # noqa: E402
+
 def main() -> None:
+    cetak_identitas()
     parser = argparse.ArgumentParser(description="Klien dengan stub lama (L2.3)")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=50051)

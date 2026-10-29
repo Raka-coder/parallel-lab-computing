@@ -9,8 +9,9 @@ Membangun **server kalkulator** dengan `xmlrpc.server`, lalu memakainya untuk me
 | `server_util.py` | Utilitas bersama: cek port, tunggu server siap, `Transport` tanpa retry, proxy dengan timeout/retry, nyalakan/hentikan server otomatis |
 | `server_kalkulator.py` | `SimpleXMLRPCServer` + `ThreadingMixIn`, metode `tambah`, `kali`, `bagi`, `pangkat`, `akar`, `statistik`, `echo`, `lambat` |
 | `client_kalkulator.py` | Client interaktif/CLI untuk memanggil semua metode |
-| `l1_all.py` | Driver L1.1–L1.5; bisa dijalankan semua atau per bagian (`--bagian`) |
-| `hasil/` | Log hasil eksekusi (`l1_all.txt`) |
+| `l1_all.py` | Driver L1.1–L1.5; bisa dijalankan semua atau per bagian (`--bagian`), termasuk `--use-podman` |
+| `test_l1_4_podman.sh` | L1.4 lintas jaringan: server di host, client di container Podman |
+| `hasil/` | Log hasil eksekusi (`l1_all.txt`, `l1_4_podman.txt`) |
 
 ## Cara menjalankan
 
@@ -47,7 +48,26 @@ Pemetaan: `1`=L1.1 pangkat/akar, `2`=L1.2 marshalling, `3`=L1.3 batas tipe, `4`=
 
 Driver menyalakan satu server bersama untuk bagian 1/3/4, lalu mematikannya. L1.5 mengelola servernya sendiri (port bebas mulai 8010) karena skenario memang mematikan server.
 
-### C. Benchmark dua komputer
+### C. Benchmark lintas jaringan via Podman (tanpa komputer kedua)
+
+```bash
+python praktikum1/l1_all.py --bagian 4 --use-podman
+# atau langsung:
+./praktikum1/test_l1_4_podman.sh
+```
+
+Skrip membuat network `rpc-test-net`, menjalankan image `python:3.12-alpine`
+sebagai client, dan memakai `host.containers.internal` sebagai alamat host.
+Container punya namespace jaringan sendiri, jadi traffic tidak lewat `lo` host.
+Bila belum ada server, skrip menyalakannya sendiri di `0.0.0.0` (port bebas)
+lalu mematikannya lagi. Hasil: **±1,7–1,9 ms/panggilan** vs lokal **±0,06–0,19 µs**
+(±24.000–31.000×); log di `praktikum1/hasil/l1_4_podman.txt`.
+
+Prasyarat: Podman terpasang. Image diambil otomatis pada run pertama (±50 MB).
+Jika muncul `Connection refused`, pastikan container dapat menjangkau
+`host.containers.internal`; pada Podman rootless Fedora biasanya sudah jalan.
+
+### D. Benchmark dua komputer
 
 Di komputer server:
 
@@ -73,7 +93,7 @@ Pada mode dua komputer, skrip **tidak** menyalakan server lokal: ia menguji kone
 |---|---|
 | L1.2 | `tambah(5,3)` ≈ **190 B** request, **121 B** response; data murni 12 B → overhead **±96 %** (XML tag + HTTP header) |
 | L1.3 | `datetime` → `xmlrpc.client.DateTime`; `2**31` → `OverflowError` di client (batas `int` XML-RPC 32-bit); `pangkat(2,40)` → `Fault` di server; `pangkat(2.0,40)` → `1099511627776.0` |
-| L1.4 | XML-RPC ±**1,9–2,1 ms** vs lokal ±**0,1–0,19 µs** per panggilan (**±11.000–19.000×** di localhost; `--verbose` ±2× lebih lambat) |
+| L1.4 | XML-RPC ±**1,9–2,1 ms** vs lokal ±**0,06–0,19 µs** per panggilan (**±11.000–32.000×**); via Podman ±**1,7–1,9 ms** (**±24.000–31.000×**); `--verbose` ±2× lebih lambat |
 | L1.5 | (1) server mati → `ConnectionRefusedError`; (2) server mati setelah koneksi → `RemoteDisconnected`; (3) retry → hasil benar (**42**) |
 
 ## Menyimpan log
@@ -87,7 +107,7 @@ python praktikum1/l1_all.py 2>&1 | tee praktikum1/hasil/l1_all.txt
 ```text
 server_kalkulator.py  --host 0.0.0.0  --port 8000  --verbose
 client_kalkulator.py  --host 127.0.0.1 --port 8000 --verbose
-l1_all.py             [--bagian 1 2 3 4 5] [--host 127.0.0.1] [--port 8000] [--putaran 5]
+l1_all.py             [--bagian 1 2 3 4 5] [--host 127.0.0.1] [--port 8000] [--putaran 5] [--use-podman]
 ```
 
 `--verbose` menampilkan HTTP/XML mentah sehingga terlihat langsung isi marshalling.

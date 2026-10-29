@@ -1,9 +1,18 @@
+================================================================================
+  KOMPUTASI PARALEL & TERDISTRIBUSI
+  Praktikum Remote Procedure Calls (RPC)
+================================================================================
+  MAHASISWA   : Raka Restu Saputra
+  NIM         : 247006111172
+  KELAS       : F
+================================================================================
+
 
 ==========================================================================
 L3.1 — Retry dengan request_id TETAP (efek: sekali saja / at-most-once)
 ==========================================================================
-Run 1: RPC=31 (retry 11), gagal=0, A=800, B=700, total=1500
-Run 2: RPC=25 (retry 5), gagal=0, A=800, B=700, total=1500
+Run 1: RPC=27 (retry 7), gagal=0, A=800, B=700, total=1500
+Run 2: RPC=26 (retry 6), gagal=0, A=800, B=700, total=1500
 
 Harapan: A=800 (1000-200), B=700, total=1500.
 Retry menemukan request_id di PROSES -> balasan sama, TANPA transfer ulang.
@@ -11,8 +20,8 @@ Retry menemukan request_id di PROSES -> balasan sama, TANPA transfer ulang.
 ==========================================================================
 L3.2 — request_id BARU setiap percobaan (efek: transfer berulang)
 ==========================================================================
-Run 1: transfer sampai ke server=29, dilaporkan gagal=0, A=710, B=790, total=1500
-Run 2: transfer sampai ke server=27, dilaporkan gagal=0, A=730, B=770, total=1500
+Run 1: transfer sampai ke server=28, dilaporkan gagal=1, A=720, B=780, total=1500
+Run 2: transfer sampai ke server=25, dilaporkan gagal=0, A=750, B=750, total=1500
 
 Harapan seharusnya A=800. Setiap timeout memakai ID baru -> server
 menganggap permintaan berbeda dan mengeksekusi transfer lagi.
@@ -20,10 +29,10 @@ menganggap permintaan berbeda dan mengeksekusi transfer lagi.
 ==========================================================================
 L3.3 — Tanpa lock: race condition (harapan A=500, B=1000, total=1500)
 ==========================================================================
-dengan lock                     : A= 500 B=1000 total=1500  (0.04s)
-tanpa lock                      : A= 500 B=1000 total=1500  (0.04s)
-tanpa lock + jendela 2 ms       : A= 850 B= 650 total=1500  (0.06s)
-dengan lock + jendela 2 ms      : A= 500 B=1000 total=1500  (0.13s)
+dengan lock                     : A= 500 B=1000 total=1500  (0.03s)
+tanpa lock                      : A= 500 B=1000 total=1500  (0.03s)
+tanpa lock + jendela 2 ms       : A= 900 B= 600 total=1500  (0.04s)
+dengan lock + jendela 2 ms      : A= 500 B=1000 total=1500  (0.12s)
 
 Catatan jujur: menghapus lock saja sering TIDAK memunculkan kerusakan
 pada CPython (GIL + critical section sangat pendek). Jendela baca->tulis
@@ -32,10 +41,10 @@ pada CPython (GIL + critical section sangat pendek). Jendela baca->tulis
 ==========================================================================
 L3.4 — Throughput vs max_workers (200 GetMahasiswa, server tidur 0,1 s)
 ==========================================================================
-workers= 1:  20.27s |     9.9 req/s | latensi    1930 ms
-workers= 4:   5.08s |    39.4 req/s | latensi     487 ms
-workers=10:   2.05s |    97.8 req/s | latensi     198 ms
-workers=20:   1.07s |   187.3 req/s | latensi     104 ms
+workers= 1:  20.19s |     9.9 req/s | latensi    1923 ms
+workers= 4:   5.06s |    39.5 req/s | latensi     485 ms
+workers=10:   2.05s |    97.7 req/s | latensi     198 ms
+workers=20:   1.06s |   188.9 req/s | latensi     104 ms
 
 Teori throughput ~ max_workers / 0,1 s (10/40/100/200 req/s).
 Latensi naik saat worker sedikit karena permintaan mengantre (Hukum Little).

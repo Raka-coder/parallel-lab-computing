@@ -11,9 +11,14 @@ Jalankan:
 from __future__ import annotations
 
 import argparse
+import sys
 import threading
 import time
 import xmlrpc.client
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from banner import cetak_identitas  # noqa: E402
 
 from harness import judul, server, siapkan_path
 
@@ -171,6 +176,7 @@ def l2_5_asinkron(stub) -> None:
 
 # ---------------------------------------------------------------------------
 def main() -> None:
+    cetak_identitas()
     global HOST, PORT
     parser = argparse.ArgumentParser(description="Praktikum 2 — semua latihan")
     parser.add_argument(

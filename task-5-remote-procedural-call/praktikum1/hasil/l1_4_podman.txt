@@ -1,0 +1,26 @@
+L1.4 PODMAN — lokal 0.072 us/panggilan, port 8023, 100 request
+
+======================================================================
+  L1.4 — BENCHMARK XML-RPC LINTAS JARINGAN (PODMAN)
+======================================================================
+  Image   : docker.io/library/python:3.12-alpine
+  Network : rpc-test-net
+  Port    : 8023
+  Request : 100
+
+Belum ada server XML-RPC; menyalakan /home/rakarestu/Documents/parallel-lab-computing/task-5-remote-procedural-call/venv/bin/python praktikum1/server_kalkulator.py --host 0.0.0.0 --port 8023 ...
+
+Hasil benchmark di dalam container
+  Host tujuan     : host.containers.internal:8023
+  Requests        : 100
+  Total           : 0.1708 s
+  Rata-rata       : 1.7078 ms/panggilan
+  Median          : 1.6560 ms
+  Min / Maks      : 1.3100 / 2.6487 ms
+  Environment     : PODMAN CONTAINER (Cross-Network)
+PODMAN_HOST=host.containers.internal
+PODMAN_AVG_MS=1.707840
+
+======================================================================
+  UJI L1.4 SELESAI — container sebagai perangkat kedua
+======================================================================

@@ -196,7 +196,14 @@ def pesan_gagal_bind(port: int) -> None:
     raise SystemExit(2)
 
 
+import sys as _sys
+from pathlib import Path as _Path
+
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
+from banner import cetak_identitas  # noqa: E402
+
 def main() -> None:
+    cetak_identitas()
     parser = argparse.ArgumentParser(description="Server gRPC persisten (SQLite)")
     parser.add_argument("--port", type=int, default=50061)
     parser.add_argument("--db", default="saldo.db", help="berkas database SQLite")
