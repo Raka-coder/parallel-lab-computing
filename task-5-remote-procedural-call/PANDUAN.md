@@ -242,7 +242,7 @@ Yang dibuktikan tiap skrip:
 | `--bagian 1` | Memanggil `pangkat` dan `akar` | `pangkat(2,10)=1024`; `akar(-4)` → `Fault` |
 | `--bagian 2` | Mengukur panjang XML untuk `tambah(5,3)` | request **190 B**, response **121 B**, padahal datanya hanya 12 B → overhead **96,1 %** |
 | `--bagian 3` | `datetime`, `2**31`, `2**40`, `pangkat(2,40)`, `pangkat(2.0,40)` | `DateTime` wrapper; `OverflowError` di client (int XML-RPC 32-bit); `Fault` di server saat marshalling hasil; `double` berhasil |
-| `--bagian 4` | 100× panggilan lokal vs 100× panggilan RPC | lokal **±0,06–0,19 µs**, RPC **±1,9–2,1 ms** → **±11.000–32.000×** lebih lambat; via Podman **±1,7–1,9 ms** (**±24.000–31.000×**); `--verbose` ±2× lebih lambat |
+| `--bagian 4` | 100× panggilan lokal vs 100× panggilan RPC | lokal **±0,06–0,19 µs**, RPC **±1,9–2,1 ms** → **±11.000–32.000×** lebih lambat; via Podman **±1,7–1,9 ms** (**±24.000–31.000×**); via WSL2 **±3,05–3,19 ms** (**±28.000–67.000×**); `--verbose` ±2× lebih lambat |
 | `--bagian 5` | Mematikan server di tiga titik berbeda | `ConnectionRefusedError`, `RemoteDisconnected`, lalu retry berhasil menghasilkan `42` |
 
 ### 7d. L1.4 versi dua komputer (sesuai lembar latihan)
@@ -308,6 +308,47 @@ lokal (±24.000–31.000×). Log lengkap ditulis ke `praktikum1/hasil/l1_4_podma
 > tidak sebesar jaringan WiFi/LAN sungguhan. Yang dibuktikan adalah biaya
 > serialisasi XML + HTTP + socket + lintas namespace jaringan, bukan komputasi
 > `tambah()` itu sendiri.
+
+### 7f. Alternatif tanpa komputer kedua: WSL2 Debian
+
+Jika Windows sudah punya WSL Debian, WSL2 bisa menjadi "perangkat kedua".
+WSL2 memakai network namespace sendiri; traffic dari client WSL ke server
+Windows melewati Hyper-V Virtual Switch, bukan `127.0.0.1`.
+
+Prasyarat: `wsl -d Debian` berjalan dan `python3` tersedia. Server Windows
+harus bind `0.0.0.0` (default) dan port 8000 diizinkan firewall. Bila perlu,
+buka PowerShell sebagai Administrator:
+
+```powershell
+New-NetFirewallRule -DisplayName "XMLRPC L1.4 WSL" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow
+```
+
+Dari PowerShell di folder `task-5-remote-procedural-call/`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File praktikum1/test_l1_4_wsl.ps1
+```
+
+Runner menyalakan server bila port 8000 belum listen, menyalin
+`rpc_l14_wsl.py` ke home WSL (`~`), menentukan alamat Windows, menjalankan
+100× `tambah(5,3)` dari WSL, lalu menyimpan log ke
+`praktikum1/hasil/l1_4_wsl.txt`. Untuk menjalankan manual:
+
+```bash
+wsl -d Debian
+python3 rpc_l14_wsl.py
+python3 rpc_l14_wsl.py --host 192.168.1.41
+```
+
+Tanpa `--host`, skrip memakai `WINDOWS_IP` bila diisi, lalu gateway WSL
+(`ip route`). Di mesin ini gateway (`172.26.160.1`) memberi **±3,05–3,19 ms**
+per panggilan, sedangkan IP LAN (`192.168.1.41`) **±12,8 ms** karena melewati
+NAT. Keduanya bukan loopback. Lokal di WSL **±0,05–0,11 µs** per panggilan
+(±28.000–67.000×). Jangan pakai `--verbose` saat benchmark.
+
+> Catatan akademik: WSL2 berbagi kernel/CPU dengan Windows, jadi latency tidak
+> sebesar dua mesin fisik di WiFi/LAN. Yang dibuktikan adalah biaya serialisasi
+> XML + HTTP + socket + lintas namespace jaringan, bukan komputasi `tambah()`.
 
 **Kesimpulan Praktikum 1:** RPC itu mudah dipakai, tetapi mahal dan bisa gagal. Program yang memakai RPC wajib menangani timeout, retry, dan server yang mati.
 

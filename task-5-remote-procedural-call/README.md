@@ -78,6 +78,7 @@ python praktikum1/l1_all.py                 # semua L1.1-L1.5
 python praktikum1/l1_all.py --bagian 2      # hanya L1.2
 python praktikum1/l1_all.py --bagian 2 4    # hanya L1.2 dan L1.4
 python praktikum1/l1_all.py --bagian 4 --use-podman   # L1.4 via container
+powershell -ExecutionPolicy Bypass -File praktikum1/test_l1_4_wsl.ps1  # L1.4 via WSL2
 ```
 
 ### Praktikum 2 — gRPC
@@ -108,12 +109,12 @@ python praktikum3/l3_all.py --bagian 6   # restart: dedup RAM vs SQLite
 
 ## Hasil pengukuran
 
-Lingkungan: AMD Ryzen 5 3500U (8 logical core), Linux, Python 3.14.6, grpcio 1.85.0, **satu mesin (localhost)**.
+Lingkungan: AMD Ryzen 5 3500U (8 logical core), Linux, Python 3.14.6, grpcio 1.85.0, **satu mesin (localhost)**; L1.4 juga diuji dari **WSL2 Debian** di Windows (Python 3.13.5) ke server Windows.
 
 | Latihan | Hasil |
 |---|---|
 | P1 — ukuran `tambah(5,3)` | request **190 B**, response **121 B** dari data 12 B → overhead **96,1 %** |
-| P1 — latensi 100× `tambah` | lokal ±0,06–0,19 µs vs XML-RPC ±1,9–2,1 ms → **±11.000–32.000×**; via Podman **±1,7–1,9 ms** (**±24.000–31.000×**, isolasi network namespace) |
+| P1 — latensi 100× `tambah` | lokal ±0,06–0,19 µs vs XML-RPC ±1,9–2,1 ms → **±11.000–32.000×**; via Podman **±1,7–1,9 ms** (**±24.000–31.000×**, isolasi network namespace); via WSL2 **±3,05–3,19 ms** (**±28.000–67.000×**, Hyper-V Virtual Switch) |
 | P2 — ukuran `Mahasiswa` | Protobuf **24 B** (37 B dengan `prodi`) vs XML-RPC **350 B** → **14,6×** |
 | P2 — request satu NIM | Protobuf **9 B** vs XML-RPC **163 B** → **18,1×** |
 | P2 — async 10× (server 0,1 s) | sinkron 1.021 ms vs future 109 ms |

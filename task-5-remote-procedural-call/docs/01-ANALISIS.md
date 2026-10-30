@@ -71,11 +71,12 @@ Error `bagi(10, 0)` **tidak** menjadi error HTTP; server tetap membalas `HTTP 20
 |---|---|---|
 | Fungsi lokal | 0,0049 ms | 0,049 µs |
 | XML-RPC (localhost) | 40,32 ms (median 5 putaran) | 0,403 ms |
-| **Rasio** | | **±8.246× lebih lambat** |
+| XML-RPC (WSL2 Debian → Windows) | 305,2 ms (median 5 putaran) | 3,052 ms |
+| **Rasio localhost** | | **±8.246× lebih lambat** |
 
 Analisis: biaya RPC berasal dari serialisasi XML, pembuatan/penguraian HTTP, system call socket, dan context switch antar proses — bukan dari penjumlahan itu sendiri. Pada **dua komputer berbeda** angkanya akan lebih besar lagi karena ditambah latensi jaringan (RTT) per panggilan. Pelajaran desain: hindari pemanggilan RPC kecil berulang (*chatty interface*); gabungkan menjadi satu panggilan batch.
 
-> ⚠️ Angka di atas diukur di **satu mesin**. Untuk memenuhi soal (dua komputer), jalankan ulang: `python praktikum1/l1_all.py --bagian 4 --host <IP_SERVER>` dan ganti tabel di laporan.
+> ⚠️ Baris lokal dan localhost diukur di **satu mesin**. Uji lintas jaringan sudah dilakukan dari **WSL2 Debian** ke server Windows melalui Hyper-V Virtual Switch: **±3,05–3,19 ms/panggilan** vs lokal WSL **±0,05–0,11 µs** (±28.000–67.000×), log `praktikum1/hasil/l1_4_wsl.txt`. Jalankan ulang dengan `powershell -ExecutionPolicy Bypass -File praktikum1/test_l1_4_wsl.ps1` atau `wsl -d Debian -- python3 praktikum1/rpc_l14_wsl.py`.
 
 ### 1.5 L1.3 — `datetime` dan bilangan > 2³¹
 
@@ -249,7 +250,7 @@ Jawaban: **jaminan at-most-once hilang** — `PROSES` kosong setelah restart, se
 
 ## 5. Keterbatasan pengukuran (tulis jujur di laporan)
 
-- Semua uji dijalankan pada **satu mesin, localhost**; soal L1.4 meminta dua komputer — ulangi dengan `python praktikum1/l1_all.py --bagian 4 --host <IP>`.
+- Sebagian besar uji dijalankan pada **satu mesin, localhost**; L1.4 sudah diuji lintas network namespace via Podman dan **WSL2 Debian** (gateway Hyper-V). Latensi WSL lebih tinggi daripada Podman karena lapisan virtualisasi Windows, dan IP LAN Windows melewati NAT (±12,8 ms vs gateway ±3,05 ms).
 - Hasil L3.1/L3.2/L3.3 bersifat acak (peluang 30 % balasan lambat); jumlah retry berbeda tiap run, **kesimpulan tidak berubah**. Sertakan minimal dua run.
 - L3.4 memakai 2 putaran per konfigurasi (rata-rata); gunakan ≥ 3 putaran untuk laporan.
 - Angka ukuran Protobuf vs XML adalah payload, bukan total byte di kabel.

@@ -11,7 +11,9 @@ Membangun **server kalkulator** dengan `xmlrpc.server`, lalu memakainya untuk me
 | `client_kalkulator.py` | Client interaktif/CLI untuk memanggil semua metode |
 | `l1_all.py` | Driver L1.1–L1.5; bisa dijalankan semua atau per bagian (`--bagian`), termasuk `--use-podman` |
 | `test_l1_4_podman.sh` | L1.4 lintas jaringan: server di host, client di container Podman |
-| `hasil/` | Log hasil eksekusi (`l1_all.txt`, `l1_4_podman.txt`) |
+| `rpc_l14_wsl.py` | L1.4 lintas jaringan: client Python di WSL Debian, server di Windows |
+| `test_l1_4_wsl.ps1` | Runner Windows: menyalakan server bila perlu, menyalin skrip ke `~` WSL, lalu menjalankan benchmark |
+| `hasil/` | Log hasil eksekusi (`l1_all.txt`, `l1_4_podman.txt`, `l1_4_wsl.txt`) |
 
 ## Cara menjalankan
 
@@ -67,7 +69,35 @@ Prasyarat: Podman terpasang. Image diambil otomatis pada run pertama (±50 MB).
 Jika muncul `Connection refused`, pastikan container dapat menjangkau
 `host.containers.internal`; pada Podman rootless Fedora biasanya sudah jalan.
 
-### D. Benchmark dua komputer
+### D. Benchmark lintas jaringan via WSL2 Debian
+
+WSL2 punya network namespace sendiri, jadi client di WSL tidak memakai
+loopback Windows. Jalankan dari PowerShell di Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File praktikum1/test_l1_4_wsl.ps1
+```
+
+Runner otomatis menyalakan server `0.0.0.0:8000` bila belum ada, menyalin
+`rpc_l14_wsl.py` ke home WSL, memakai gateway WSL (`vEthernet (WSL)`) sebagai
+alamat Windows, lalu menyimpan log ke `praktikum1/hasil/l1_4_wsl.txt`.
+Alternatif manual dari terminal WSL Debian:
+
+```bash
+python3 rpc_l14_wsl.py
+python3 rpc_l14_wsl.py --host 192.168.1.41 --requests 100 --rounds 5
+```
+
+Hasil di mesin ini: **±3,05–3,19 ms/panggilan** dari WSL vs lokal WSL
+**±0,05–0,11 µs** (±28.000–67.000×). IP LAN Windows (`192.168.1.41`) terukur
+±12,8 ms karena melewati NAT; gateway WSL lebih stabil dan tetap bukan
+loopback. Bila koneksi gagal, buka port 8000 di firewall Windows:
+
+```powershell
+New-NetFirewallRule -DisplayName "XMLRPC L1.4 WSL" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow
+```
+
+### E. Benchmark dua komputer
 
 Di komputer server:
 
@@ -93,7 +123,7 @@ Pada mode dua komputer, skrip **tidak** menyalakan server lokal: ia menguji kone
 |---|---|
 | L1.2 | `tambah(5,3)` ≈ **190 B** request, **121 B** response; data murni 12 B → overhead **±96 %** (XML tag + HTTP header) |
 | L1.3 | `datetime` → `xmlrpc.client.DateTime`; `2**31` → `OverflowError` di client (batas `int` XML-RPC 32-bit); `pangkat(2,40)` → `Fault` di server; `pangkat(2.0,40)` → `1099511627776.0` |
-| L1.4 | XML-RPC ±**1,9–2,1 ms** vs lokal ±**0,06–0,19 µs** per panggilan (**±11.000–32.000×**); via Podman ±**1,7–1,9 ms** (**±24.000–31.000×**); `--verbose` ±2× lebih lambat |
+| L1.4 | XML-RPC ±**1,9–2,1 ms** vs lokal ±**0,06–0,19 µs** per panggilan (**±11.000–32.000×**); via Podman ±**1,7–1,9 ms** (**±24.000–31.000×**); via WSL2 Debian ±**3,05–3,19 ms** (**±28.000–67.000×**); `--verbose` ±2× lebih lambat |
 | L1.5 | (1) server mati → `ConnectionRefusedError`; (2) server mati setelah koneksi → `RemoteDisconnected`; (3) retry → hasil benar (**42**) |
 
 ## Menyimpan log
@@ -108,6 +138,8 @@ python praktikum1/l1_all.py 2>&1 | tee praktikum1/hasil/l1_all.txt
 server_kalkulator.py  --host 0.0.0.0  --port 8000  --verbose
 client_kalkulator.py  --host 127.0.0.1 --port 8000 --verbose
 l1_all.py             [--bagian 1 2 3 4 5] [--host 127.0.0.1] [--port 8000] [--putaran 5] [--use-podman]
+rpc_l14_wsl.py        [--host IP_WINDOWS] [--port 8000] [--requests 100] [--rounds 5]
+test_l1_4_wsl.ps1     [-HostIP IP_WINDOWS] [-Port 8000] [-Requests 100] [-Rounds 5] [-Distro Debian]
 ```
 
 `--verbose` menampilkan HTTP/XML mentah sehingga terlihat langsung isi marshalling.
@@ -119,4 +151,5 @@ l1_all.py             [--bagian 1 2 3 4 5] [--host 127.0.0.1] [--port 8000] [--p
 | `Port 8000 sudah dipakai proses lain` | server lama masih hidup: `ss -ltnp \| grep :8000`, lalu `kill <PID>`; atau ganti `--port 8001` |
 | Client menggantung | host/port salah, atau firewall memblokir; uji `curl http://IP:8000` |
 | L1.5 skenario 2 kadang lolos | balapan waktu; jalankan ulang, server sengaja dimatikan tepat setelah request dikirim |
+| WSL `Connection refused` / timeout | server belum bind `0.0.0.0`, firewall memblokir, atau alamat Windows salah; coba `--host` gateway WSL atau buka port 8000 |
 | Angka latensi jauh berbeda | wajar: hasil bergantung CPU, beban, dan jaringan. Catat lingkungan pengukuran |

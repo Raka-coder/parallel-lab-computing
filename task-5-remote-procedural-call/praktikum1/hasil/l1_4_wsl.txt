@@ -1,0 +1,26 @@
+﻿L1.4 WSL - Windows host 172.26.160.1:8000, 100 request x 5 putaran
+Waktu: 2026-10-30 13:56:18
+Distro: Debian
+===============================================
+  UJI L1.4: WSL DEBIAN -> WINDOWS HOST
+===============================================
+Target Server : 172.26.160.1:8000
+Sumber alamat : gateway WSL (vEthernet WSL)
+Requests      : 100 x 5 putaran
+Tes koneksi   : 5 + 3 = 8
+
+Memulai benchmark 100x pemanggilan tambah()...
+
+--- HASIL BENCHMARK ---
+Lokal (WSL)   : 0.046 us/panggilan
+XML-RPC       : 2.3912 ms/panggilan
+Total Waktu   : 0.2391 detik (median 5 putaran)
+Rata-rata     : 2.4150 ms/panggilan
+Rentang       : 2.3824 - 2.4624 ms
+Rasio         : XML-RPC 51,982x lebih lambat daripada lokal
+Environment   : WSL DEBIAN (Client) -> WINDOWS (Server)
+Network Path  : Hyper-V Virtual Switch (Cross-Network)
+WSL_AVG_MS=2.391160
+LOCAL_US=0.046000
+=======================
+

@@ -97,7 +97,7 @@ Modul menilai Praktikum 1–3 secara terpisah: setiap latihan (L1.x, L2.x, L3.x)
 ## 9. Risiko dan mitigasi
 | Risiko | Dampak | Mitigasi |
 |---|---|---|
-| Uji dua komputer belum dilakukan | L1.4 tidak memenuhi soal | Jalankan `praktikum1/l1_all.py --bagian 4 --host <IP>` di lab/laptop kedua; catat di laporan |
+| Uji dua komputer belum dilakukan | L1.4 tidak memenuhi soal | Sudah dijalankan lintas network namespace via Podman dan WSL2 Debian (`praktikum1/hasil/l1_4_podman.txt`, `l1_4_wsl.txt`); bila ada dua mesin fisik, jalankan `python praktikum1/l1_all.py --bagian 4 --host <IP>` |
 | Race condition L3.3 tidak muncul | Kesimpulan salah ("tidak ada race") | Laporkan apa adanya + jendela diperlebar + penjelasan GIL |
 | Hasil acak berbeda antar run | Angka laporan ≠ angka di sini | Jalankan ulang, pakai angka sendiri; analisis kualitatif tetap |
 | Kemiripan antar mahasiswa / kode dari alat bantu | Pemeriksaan kesamaan | Pahami kode, tulis ulang analisis dengan kata sendiri, cantumkan alat bantu |
